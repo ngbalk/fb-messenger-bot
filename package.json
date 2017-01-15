@@ -1,0 +1,12 @@
+{
+  "name": "flights-genie",
+  "private": true,
+  "version": "0.0.1",
+  "description": "",
+  "license": "MIT",
+  "scripts": {},
+  "dependencies": {
+    "genie.apiclient": "0.1.0",
+    "express": "~4.14.0"
+  }
+}
