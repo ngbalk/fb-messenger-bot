@@ -1,6 +1,6 @@
 
 
-// send message to groups with a trip recommendation
+// send trip recs to all groups
 
 // var groupsData = {};
 // function sendGroupRecs(){
@@ -19,19 +19,62 @@
 //  }
 // }
 
+// setup express
 var express = require('express');
+var bodyParser = require('body-parser');
+
+// load and configure genieApi
+var genieApi = require('genie.apiclient');
+genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret: '9be5a4eba01d0de93b67f2821156141d91dcf5e55662068d91715e8c8aa2924e'});
+
 
 //register endpoints
 var app = express();
+app.use(bodyParser.json());
 
-/** Accept genie group events **/
+var airportUserMapping = {};
+var groups = {};
+
 app.get('/genie_profile', function (req, res) {
-	res.send(
-		{
-			name: 'airport',
-			value: 'JFK'
-		}
-	);
+	console.log("getting configuration");
+	var retData = { data : [{
+						name: 'airport',
+						value: airportUserMapping[req.query.blendKey] || 'JFK'
+					}]};
+	res.status(200).json(retData).end();
+});
+
+app.post('/genie_profile', function (req, res) {
+	console.log(req);
+	airportUserMapping[req.query.blendKey] = req.body.airport;
+	res.status(200).end();
+});
+
+app.post('/events', function (req, res) {
+	console.log("receiving event");
+	console.log(req);
+    var currentUrl = 'https://genie.localtunnel.me/events';
+    genieApi.processEvent(currentUrl, req, res, function(err,eventData){
+        if (err) return console.error(err);
+        if (!eventData || !eventData.event) return;
+ 
+        switch(eventData.event.type){
+            case 'subscription/success': break;
+            case 'genie/init': console.log('being added to a group', eventData.group.id);  break;  
+            case 'genie/added': 
+            	console.log('added to group', eventData.group.id);
+            	groups[eventData.group.id] = [];
+            	for(var i in eventData.payload.members){
+            		groups[eventData.group.id].push(eventData.payload.members[i].id); 
+            		console.log(eventData.payload.members[i]);
+            	}
+            break;
+            case 'genie/removed':
+            	delete groups[eventData.group.id];
+            	console.log('removed from group', eventData.group.id);  
+            break;      
+        }
+	});
 });
 
 
