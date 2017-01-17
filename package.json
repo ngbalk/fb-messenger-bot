@@ -8,6 +8,7 @@
   "dependencies": {
     "genie.apiclient": "0.1.0",
     "express": "~4.14.0",
-    "body-parser": "1.15.2"
+    "body-parser": "1.15.2",
+    "xmlhttprequest": "^1.8.0"
   }
 }

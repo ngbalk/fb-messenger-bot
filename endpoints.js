@@ -1,23 +1,9 @@
 
-
-// send trip recs to all groups
-
-// var groupsData = {};
-// function sendGroupRecs(){
-//  for(var group in groupsData){
-//  	var data = {
-//  		text: "Check out this trip!",
-//  		display_unit: "...",
-//  		payload: {},
-//  		push: {
-//  			text: '...'
-//  		}
-//  	};
-//  	genieApi.post('/genies/groups/group.id/message', data, function(e,r,b){
-//  		console.log("sending message");
-//  	});
-//  }
-// }
+/*
+*
+* endpoints
+*
+*/
 
 // setup express
 var express = require('express');
@@ -60,7 +46,7 @@ app.post('/events', function (req, res) {
  
         switch(eventData.event.type){
             case 'subscription/success': break;
-            case 'genie/init': console.log('being added to a group', eventData.group.id);  break;  
+
             case 'genie/added': 
             	console.log('added to group', eventData.group.id);
             	groups[eventData.group.id] = [];
@@ -69,14 +55,28 @@ app.post('/events', function (req, res) {
             		console.log(eventData.payload.members[i]);
             	}
             break;
+
             case 'genie/removed':
             	delete groups[eventData.group.id];
-            	console.log('removed from group', eventData.group.id);  
+            	console.log('removed from group', eventData.group.id);
+            break;
+
+            case 'member/leave' || 'member/removed':
+                for(var i in eventData.payload.members){
+                    groups[eventData.group.id].splice(groups[eventData.group.id].indexOf(eventData.payload.members[i].id),1); 
+                    console.log('member ' + eventData.payload.members[i].id + ' left from group');
+                }
             break;      
+            
+            case 'member/added':
+                for(var i in eventData.payload.members){
+                    groups[eventData.group.id].push(eventData.payload.members[i].id); 
+                    console.log('member ' + eventData.payload.members[i].id + ' added to group');
+                }
+            break;
         }
 	});
 });
-
 
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
