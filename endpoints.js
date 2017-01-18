@@ -5,6 +5,15 @@
 *
 */
 
+// configure database
+var firebase = require("firebase-admin");
+firebase.initializeApp({
+  credential: firebase.credential.cert("firebase-sdk-keys.json"),
+  databaseURL: "https://flights-genie.firebaseio.com"
+});
+// Get a reference to the database service
+var database = firebase.database();
+
 // setup express
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -18,27 +27,24 @@ genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret
 var app = express();
 app.use(bodyParser.json());
 
-var airportUserMapping = {};
-var groups = {};
-
 app.get('/genie_profile', function (req, res) {
 	console.log("getting configuration");
-	var retData = { data : [{
-						name: 'airport',
-						value: airportUserMapping[req.query.blendKey] || 'JFK'
-					}]};
-	res.status(200).json(retData).end();
+    database.ref('/airports/' + req.query.blendKey).once('value').then(function(dataSnapshot) {
+        var retData = { data : [{
+                        name: 'airport',
+                        value: dataSnapshot.val() || 'JFK'
+                    }]};
+        res.status(200).json(retData).end();
+    });
+
 });
 
 app.post('/genie_profile', function (req, res) {
-	console.log(req);
-	airportUserMapping[req.query.blendKey] = req.body.airport;
+    database.ref('/airports/' + req.query.blendKey).set(req.body.airport);
 	res.status(200).end();
 });
 
 app.post('/events', function (req, res) {
-	console.log("receiving event");
-	console.log(req);
     var currentUrl = 'https://genie.localtunnel.me/events';
     genieApi.processEvent(currentUrl, req, res, function(err,eventData){
         if (err) return console.error(err);
@@ -47,32 +53,41 @@ app.post('/events', function (req, res) {
         switch(eventData.event.type){
             case 'subscription/success': break;
 
-            case 'genie/added': 
+            case 'genie/added':
+                var groupsRef = database.ref('/groups/' + eventData.group.id);
+                var members = [];
             	console.log('added to group', eventData.group.id);
-            	groups[eventData.group.id] = [];
             	for(var i in eventData.payload.members){
-            		groups[eventData.group.id].push(eventData.payload.members[i].id); 
-            		console.log(eventData.payload.members[i]);
+            		members.push(eventData.payload.members[i].id);
             	}
+                groupsRef.set(members);
             break;
 
             case 'genie/removed':
-            	delete groups[eventData.group.id];
+                database.ref('/groups/' + eventData.group.id).remove();
             	console.log('removed from group', eventData.group.id);
             break;
 
             case 'member/leave' || 'member/removed':
-                for(var i in eventData.payload.members){
-                    groups[eventData.group.id].splice(groups[eventData.group.id].indexOf(eventData.payload.members[i].id),1); 
-                    console.log('member ' + eventData.payload.members[i].id + ' left from group');
-                }
+                var groupsRef = database.ref('/groups/' + eventData.group.id);
+                groupsRef.once("value").then(function(groupSnapshot) {
+                    groupSnapshot.forEach(function(memberSnapshot) {
+                      if(eventData.payload.members.contains(memberSnapshot.val())){
+                        memberSnapshot.ref().remove();
+                        console.log('member ' + memberSnapshot.val() + ' left from group');
+                      }
+                  });
+                });
             break;      
             
             case 'member/added':
+                var groupsRef = database.ref('/groups/' + eventData.group.id);
+                var members = [];
                 for(var i in eventData.payload.members){
-                    groups[eventData.group.id].push(eventData.payload.members[i].id); 
+                    members.push(eventData.payload.members[i].id);
                     console.log('member ' + eventData.payload.members[i].id + ' added to group');
                 }
+                groupsRef.set(members);
             break;
         }
 	});

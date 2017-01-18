@@ -6,9 +6,10 @@
   "license": "MIT",
   "scripts": {},
   "dependencies": {
-    "genie.apiclient": "0.1.0",
-    "express": "~4.14.0",
     "body-parser": "1.15.2",
+    "express": "~4.14.0",
+    "firebase-admin": "^4.0.5",
+    "genie.apiclient": "0.1.0",
     "xmlhttprequest": "^1.8.0"
   }
 }

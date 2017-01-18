@@ -18,7 +18,7 @@ function getTrips(originCities, scope){
   }
   var tripsData = [];
   for(var i=0;i<originCities.length;i++){
-    originCity=originCities[i];
+    originCity=originCities[i] || 'JFK';
     var xmlHttp = new XMLHttpRequest();
     var url = 'http://partners.api.skyscanner.net/apiservices/browsequotes/v1.0/US/USD/en-US/'+originCity+'/'+dest+'/anytime/anytime?apiKey='+apiKey;
     xmlHttp.open("GET",url, false);
@@ -111,41 +111,50 @@ function getSkyscannerCodeById(destinationId,travelDataObject){
 /*
 * Send trip recommendations to each group
 */
-var groups = {
-  'f01e4d1a-fca0-485a-a7f0-bfe44dc46b86':['b81e2ac6-4dc0-49c6-9a34-6417375a9658']
-}; //We will query this from DB but can hardcode for now
-var airportUserMapping = {
-  'b81e2ac6-4dc0-49c6-9a34-6417375a9658':'SFO' 
-};
+
+// configure database
+var firebase = require("firebase-admin");
+firebase.initializeApp({
+  credential: firebase.credential.cert("firebase-sdk-keys.json"),
+  databaseURL: "https://flights-genie.firebaseio.com"
+});
+// Get a reference to the database service
+var database = firebase.database();
 
 (function sendGroupRecs(){
-  for(var id in groups){
-    var dests = [];
-    var origins = [];
-    for(var i=0;i<groups[id].length;i++){
-      var member=groups[id][i];
-      origins.push(airportUserMapping[member]);
-    }
-    dests = getTrips(origins,'domestic');
-    var items = [];
-    for(var i=0;i<5;i++){
-      dest=dests[i];
-      var item = {
-        index:i,
-        title: dest.destinationName,
-        description: 'group trips from $'+dest.totalCost
-      };
-      items.push(item);
-    }
- 	  var data = {
-   		text: "Check out these group trips!",
-   		display_unit: "list",
-   		payload: {
-        items: items
-      } 
- 	  };
- 	  genieApi.post('/genies/groups/'+id+'/message', data, function(e,r,b){
- 		console.log("sending message");
- 	  });
-  }
+  database.ref('/groups').once('value').then(function(groupsSnapshot) {
+    database.ref('/airports').once('value').then(function(airportsSnapshot) {
+      var groups = groupsSnapshot.val();
+      var airportUserMapping = airportsSnapshot.val();
+      for(var id in groups){
+        var dests = [];
+        var origins = [];
+        for(var i=0;i<groups[id].length;i++){
+          var member=groups[id][i];
+          origins.push(airportUserMapping[member]);
+        }
+        dests = getTrips(origins,'domestic');
+        var items = [];
+        for(var i=0;i<5;i++){
+          dest=dests[i];
+          var item = {
+            index:i,
+            title: dest.destinationName,
+            description: 'group trips from $'+dest.totalCost
+          };
+          items.push(item);
+        }
+        var data = {
+          text: "Check out these group trips!",
+          display_unit: "list",
+          payload: {
+            items: items
+          } 
+        };
+        genieApi.post('/genies/groups/'+id+'/message', data, function(e,r,b){
+        console.log("sending message");
+        });
+      }
+    });
+  });
 })();
