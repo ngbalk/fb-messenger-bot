@@ -93,6 +93,10 @@ app.post('/events', function (req, res) {
 	});
 });
 
+app.get('/', function(req, res){
+    res.status(200).end();
+});
+
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
 });
