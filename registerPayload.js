@@ -16,7 +16,7 @@ var payload = {
     availability: '*',
     subscriptions: '*',
     // will change based on localtunnel 
-    configure_url: 'https://genie.localtunnel.me/genie_profile',
+    configure_url: 'https://letsgetawaytoday.hopto.org/genie_profile',
     client: {
         images: [
         {
@@ -55,7 +55,7 @@ var payload = {
 			        fields: ['airport'],
 			 
 			        //should this be sent anywhere?
-			        destination_url: 'https://genie.localtunnel.me/genie_profile',
+			        destination_url: 'https://letsgetawaytoday.hopto.org/genie_profile',
 			        //please return 200 for sucess or another status code
 			        //with error details to be shown otherwise {error: 'text'}
 			        }

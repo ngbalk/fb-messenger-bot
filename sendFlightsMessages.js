@@ -18,7 +18,7 @@ function getTrips(originCities, scope){
   }
   var tripsData = [];
   for(var i=0;i<originCities.length;i++){
-    originCity=originCities[i] || 'JFK';
+    originCity=originCities[i];
     var xmlHttp = new XMLHttpRequest();
     var url = 'http://partners.api.skyscanner.net/apiservices/browsequotes/v1.0/US/USD/en-US/'+originCity+'/'+dest+'/anytime/anytime?apiKey='+apiKey;
     xmlHttp.open("GET",url, false);
@@ -127,6 +127,9 @@ var database = firebase.database();
       var groups = groupsSnapshot.val();
       var airportUserMapping = airportsSnapshot.val();
       for(var id in groups){
+        if(!allConfiguredUsers(id, group, airportUserMapping)){
+          continue;
+        }
         var dests = [];
         var origins = [];
         for(var i=0;i<groups[id].length;i++){
@@ -138,9 +141,10 @@ var database = firebase.database();
         for(var i=0;i<5;i++){
           dest=dests[i];
           var item = {
-            index:i,
+            index:i+1,
             title: dest.destinationName,
-            description: 'group trips from $'+dest.totalCost
+            description: 'group trips from $'+dest.totalCost,
+            on_tap: "https://www.skyscanner.com/transport/flights/us/"+dest.skyscannerCode
           };
           items.push(item);
         }
@@ -158,3 +162,21 @@ var database = firebase.database();
     });
   });
 })();
+
+function allConfiguredUsers(id, group, airportUserMapping){
+  var allConfigured=true;
+  for(var i=0;i<group.length;i++){
+    var member = group[i];
+    var message = {
+      text:'update your airport'
+    }
+    if(!airportUserMapping[member]){
+      genieApi.post('/genies/groups/'+id+'/users/'+member+'/alert', message, function(e,r,b){
+
+      });
+      allConfigured=false;
+      console.log("unconfigured user");
+    }
+  }
+  return allConfigured;
+}

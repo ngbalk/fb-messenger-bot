@@ -32,7 +32,7 @@ app.get('/genie_profile', function (req, res) {
     database.ref('/airports/' + req.query.blendKey).once('value').then(function(dataSnapshot) {
         var retData = { data : [{
                         name: 'airport',
-                        value: dataSnapshot.val() || 'JFK'
+                        value: dataSnapshot.val()
                     }]};
         res.status(200).json(retData).end();
     });
@@ -45,7 +45,7 @@ app.post('/genie_profile', function (req, res) {
 });
 
 app.post('/events', function (req, res) {
-    var currentUrl = 'https://genie.localtunnel.me/events';
+    var currentUrl = 'https://letsgetawaytoday.hopto.org/events';
     genieApi.processEvent(currentUrl, req, res, function(err,eventData){
         if (err) return console.error(err);
         if (!eventData || !eventData.event) return;
