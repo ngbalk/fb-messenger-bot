@@ -94,7 +94,7 @@ app.post('/events', function (req, res) {
 });
 
 app.get('/', function(req, res){
-    res.status(200).end();
+    res.send("hello genie");
 });
 
 app.listen(8080, function () {
