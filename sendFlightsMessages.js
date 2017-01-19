@@ -127,7 +127,7 @@ var database = firebase.database();
       var groups = groupsSnapshot.val();
       var airportUserMapping = airportsSnapshot.val();
       for(var id in groups){
-        if(!allConfiguredUsers(id, group, airportUserMapping)){
+        if(!allConfiguredUsers(id, groups[id], airportUserMapping)){
           continue;
         }
         var dests = [];
@@ -167,11 +167,8 @@ function allConfiguredUsers(id, group, airportUserMapping){
   var allConfigured=true;
   for(var i=0;i<group.length;i++){
     var member = group[i];
-    var message = {
-      text:'update your airport'
-    }
     if(!airportUserMapping[member]){
-      genieApi.post('/genies/groups/'+id+'/users/'+member+'/alert', message, function(e,r,b){
+      genieApi.post('/genies/groups/'+id+'/users/'+member+'/alert', null, function(e,r,b){
 
       });
       allConfigured=false;
