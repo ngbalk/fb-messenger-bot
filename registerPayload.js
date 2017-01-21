@@ -10,7 +10,7 @@ var payload = {
         value: 'Lets Get Away Genie'
     },
     description: {
-        value: 'A genie for helping you plan trips with your friends'
+        value: 'We track global flight price trends to find the cheapest trips for your group and help you plan your next reunion!'
     },
     permissions: ['genie/global'],
     availability: '*',
@@ -45,11 +45,12 @@ var payload = {
     		{
 			    type: 'form',
 			    header: 'header_image',
-			 
-			    title: 'airport',
-			 
-			    description: 'this is where you set your nearest airport',
-			 
+			    title: {
+                    value: 'airport configuration'
+                },
+			    description: {
+                    value: 'please enter the 3 letter airport code nearest you'
+                },
 			    form: {
 			        //reference to fields configured in payload
 			        fields: ['airport'],
@@ -58,8 +59,24 @@ var payload = {
 			        destination_url: 'https://letsgetawaytoday.hopto.org/genie_profile',
 			        //please return 200 for sucess or another status code
 			        //with error details to be shown otherwise {error: 'text'}
-			        }
-    		}
+			        },
+                next_button: {      
+                     value: 'save',
+                } 
+    		},
+            {
+                type: 'info',  
+                header: 'header_image',
+                title: {
+                    value: 'Lets Get Away!',
+                },
+                description: {
+                    value: 'The Lets Get Away Genie will help you and your friends plan your next vacation!  We track flight data to curate vacation destinations just for your group! So what are you waiting for?',
+                },
+                next_button: {      
+                     value: 'thanks!',
+                } 
+            }
         ],
         fields : [
         	{
