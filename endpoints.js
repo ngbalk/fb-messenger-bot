@@ -17,6 +17,7 @@ var database = firebase.database();
 // setup express
 var express = require('express');
 var bodyParser = require('body-parser');
+var cors = require('cors');
 
 // load and configure genieApi
 var genieApi = require('genie.apiclient');
@@ -26,11 +27,7 @@ genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret
 //register endpoints
 var app = express();
 app.use(bodyParser.json());
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
+app.use(cors());
 app.get('/genie_profile', function (req, res) {
 	console.log("getting configuration");
     database.ref('/airports/' + req.query.blendKey).once('value').then(function(dataSnapshot) {
