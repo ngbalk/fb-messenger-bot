@@ -46,8 +46,10 @@ app.get('/vote/:groupKey/:choice', function(req, res){
 });
 
 app.post('/genie_profile', function (req, res) {
-    database.ref('/airports/' + req.query.blendKey).set(req.body.airport);
+    genieApi.isValidClientRequest(req, function(userKey, cb){
+	database.ref('/airports/' + userKey).set(req.body.airport);
 	res.status(200).end();
+    });
 });
 
 app.post('/events', function (req, res) {
