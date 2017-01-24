@@ -40,6 +40,11 @@ app.get('/genie_profile', function (req, res) {
 
 });
 
+app.get('/vote/:groupKey/:choice', function(req, res){
+    database.ref('/votes/'+req.params.groupKey).push(req.params.choice);
+    res.send("you voted for "+req.params.choice);
+});
+
 app.post('/genie_profile', function (req, res) {
     database.ref('/airports/' + req.query.blendKey).set(req.body.airport);
 	res.status(200).end();

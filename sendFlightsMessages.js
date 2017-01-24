@@ -144,7 +144,7 @@ var database = firebase.database();
             index:i+1,
             title: dest.destinationName,
             description: 'group trips from $'+dest.totalCost,
-            on_tap: "https://www.skyscanner.com/transport/flights/us/"+dest.skyscannerCode
+            on_tap: 'https://letsgetawaytoday.hopto.org/vote/'+id+'/'+dest.skyscannerCode
           };
           items.push(item);
         }
