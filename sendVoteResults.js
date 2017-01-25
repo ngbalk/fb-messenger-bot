@@ -22,7 +22,7 @@ database.ref('/votes').once('value').then(function(groupsSnapshot) {
 			}
 			destCounts[op]++;
 		}
-		if(Object.keys(destCounts).length<Object.keys(destCounts).length*.75){
+		if(Object.keys(destCounts).length<Object.keys(groups).length*.75){
 			var data = {
 	        	text: 'remember to vote for your favorite destination',
 	          	display_unit: "message",
