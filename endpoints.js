@@ -23,6 +23,10 @@ var cors = require('cors');
 var genieApi = require('genie.apiclient');
 genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret: '9be5a4eba01d0de93b67f2821156141d91dcf5e55662068d91715e8c8aa2924e'});
 
+// load valid US airport codes for validation
+var fs = require("fs");
+var buffer = fs.readFileSync("./airport-codes.dat");
+var airportCodes = buffer.toString().split("\n");
 
 //register endpoints
 var app = express();
@@ -47,8 +51,13 @@ app.get('/vote/:groupKey/:choice', function(req, res){
 
 app.post('/genie_profile', function (req, res) {
     genieApi.isValidClientRequest(req, function(userKey, cb){
-	database.ref('/airports/' + userKey).set(req.body.airport);
-	res.status(200).end();
+        if(airportCodes.contains(req.body.airport.toUpperCase())){
+            database.ref('/airports/' + userKey).set(req.body.airport);
+            res.status(200).end();
+        }
+        else{
+            res.status(500).end();
+        }
     });
 });
 

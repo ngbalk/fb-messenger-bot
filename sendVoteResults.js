@@ -13,63 +13,80 @@ genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret
 database.ref('/votes').once('value').then(function(groupsSnapshot) {
 	var groups = groupsSnapshot.val();
 	for(var id in groups){
-		var code = "";
-		var destCounts = {};
-		for(var opId in groups[id]){
-			var op = groups[id][opId];
-			if(!destCounts[op]){
-				destCounts[op]=0;
+		database.ref('/groups/'+id).once('value').then(function(membersSnapshot){
+			var members = membersSnapshot.val();
+			var code = "";
+			var destCounts = {};
+			for(var opId in groups[id]){
+				var op = groups[id][opId];
+				if(!destCounts[op]){
+					destCounts[op]=0;
+				}
+				destCounts[op]++;
 			}
-			destCounts[op]++;
-		}
-		if(Object.keys(destCounts).length<Object.keys(groups).length*.75){
-			var data = {
-	        	text: 'remember to vote for your favorite destination',
-	          	display_unit: "message",
-	    	}
-		}
-		else{
-			var winner = Object.keys(destCounts).reduce(function(a, b){return destCounts[a] > destCounts[b] ? a : b });
-			var data = {
-	        	text: selectRandomMessage(winner),
-	          	display_unit: "fancy",
-	          	on_tap: 'https://www.skyscanner.com/transport/flights/us/'+winner,
-				payload: 
-					{
-		     			collection_items : 
-		     			[
-			     			{
-			     				type: 'item',
-			     				width: 'large',
-			     				background_color: '#72ffff',
-			     				border: true,
-			     				on_tap: 'https://www.skyscanner.com/transport/flights/us/'+winner,
-			     				elements: [
-			     					{
-			     						type: 'image',
-			     						image: {
-				     						url: 'https://www.seeusoon.io/assets/images/placepictures/default/UYEjt_720px.jpg',
-				     						aspect_ratio: 1.33,
-			     						},
-			     					},
+			console.log(Object.keys(destCounts).length);
+			console.log(Object.keys(members).length*.75);
+			if(Object.keys(destCounts).length<Object.keys(members).length*.75){
+				var data = {
+		        	text: 'remember to vote for your favorite destination',
+		          	display_unit: "default",
+		    	}
+			}
+			else{
+				var winner = Object.keys(destCounts).reduce(function(a, b){return destCounts[a] > destCounts[b] ? a : b });
+				database.ref('/images/'+winner).once('value').then(function(imageSnapshot){
+					imageUrl=imageSnapshot.val();
+					var data = {
+			        	text: selectRandomMessage(winner),
+			          	display_unit: "fancy",
+			          	on_tap: 'https://www.skyscanner.com/transport/flights/us/'+winner,
+						payload: 
+							{
+				     			collection_items : 
+				     			[
+				     				{
+				     					type: 'item',
+				     					width: 'large',
+				     					background_color: '#e0f7fc',
+				     					border: true,
+				     					elements: 
+				     					[
+				     						{
+				     							type: 'image',
+				     							image: 
+				     							{
+				     								url: imageUrl
+				     							}
 
-			     					{
-				     					type: 'label',
-				     					label: {
-				     						value: `lets plan your trip to ${winner}!`,
-			     						}
-			     					}
-			     				
-			     				],
+				     						},
+				     						{
+								                type: "icon_label",
+								                label: {
+								                    value: 'SFO',
+								                    color: "#000000",
+								                    font_size: 18,
+								                    font_weight: 'bold',
+								                    max_lines: 2, // 2 by default and if not defined a max of 5 lines.
+								                },
+								                alignment: 'center'
+				     						}
+
+				     					]
+				     				}
+				     			]
 			     			}
-		     			]
-	     		}
-	        };			
-		}
-        genieApi.post('/genies/groups/'+id+'/message', data, function(e,r,b){
-        	console.log("sending voting results");
-        });
+		        	};
+				    genieApi.post('/genies/groups/'+id+'/message', data, function(e,r,b){
+			        	console.log("sending voting results");
+			        });
+				});
+
+			
+			}
+
+	    });
     }
+
 });
 
 function selectRandomMessage(winner){
