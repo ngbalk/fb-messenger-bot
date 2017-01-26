@@ -51,12 +51,12 @@ app.get('/vote/:groupKey/:choice', function(req, res){
 
 app.post('/genie_profile', function (req, res) {
     genieApi.isValidClientRequest(req, function(userKey, cb){
-        if(airportCodes.contains(req.body.airport.toUpperCase())){
-            database.ref('/airports/' + userKey).set(req.body.airport);
+        if(airportCodes.includes(req.body.airport.toUpperCase())){
+            database.ref('/airports/' + userKey).set(req.body.airport.toUpperCase());
             res.status(200).end();
         }
         else{
-            res.status(500).end();
+            res.status(401).json({error: "please enter a valid airport code"}).end();
         }
     });
 });
