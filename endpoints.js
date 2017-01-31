@@ -1,10 +1,4 @@
 
-/*
-*
-* endpoints
-*
-*/
-
 // configure database
 var firebase = require("firebase-admin");
 firebase.initializeApp({
@@ -32,6 +26,8 @@ var airportCodes = buffer.toString().split("\n");
 var app = express();
 app.use(bodyParser.json());
 app.use(cors());
+
+// GET /genie_profile
 app.get('/genie_profile', function (req, res) {
 	console.log("getting configuration");
     database.ref('/airports/' + req.query.blendKey).once('value').then(function(dataSnapshot) {
@@ -44,11 +40,13 @@ app.get('/genie_profile', function (req, res) {
 
 });
 
+// GET /vote/:groupKey/:choice
 app.get('/vote/:groupKey/:choice', function(req, res){
     database.ref('/votes/'+req.params.groupKey).push(req.params.choice);
     res.send("you voted for "+req.params.choice);
 });
 
+// POST /genie_profile 
 app.post('/genie_profile', function (req, res) {
     genieApi.isValidClientRequest(req, function(userKey, cb){
         if(airportCodes.includes(req.body.airport.toUpperCase())){
@@ -61,6 +59,7 @@ app.post('/genie_profile', function (req, res) {
     });
 });
 
+// POST /events
 app.post('/events', function (req, res) {
     var currentUrl = 'https://letsgetawaytoday.hopto.org/events';
     genieApi.processEvent(currentUrl, req, res, function(err,eventData){
@@ -106,10 +105,14 @@ app.post('/events', function (req, res) {
                 }
                 groupsRef.set(members);
             break;
+
+            case 'content/message':
+                console.log(eventData);
         }
 	});
 });
 
+// GET / 
 app.get('/', function(req, res){
     res.send("hello genie");
 });
