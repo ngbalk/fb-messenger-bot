@@ -21,15 +21,15 @@ var payload = {
         images: [
         {
             name: 'avatar',
-            url: 'https://assets.wired.com/photos/w_1164/wp-content/uploads/2017/01/GettyImages-547934569.jpg',
+            url: 'https://letsgetawaytoday.hopto.org/avatar',
         },
         {
             name: 'avatar_chat',
-            url: 'https://assets.wired.com/photos/w_1164/wp-content/uploads/2017/01/GettyImages-547934569.jpg',
+            url: 'https://letsgetawaytoday.hopto.org/avatar',
         },
         {
             name: 'header_image',
-            url: 'https://assets.wired.com/photos/w_1164/wp-content/uploads/2017/01/GettyImages-547934569.jpg',
+            url: 'https://letsgetawaytoday.hopto.org/avatar',
         }
         ],
         profile: {
