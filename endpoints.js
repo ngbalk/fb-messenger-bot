@@ -14,8 +14,9 @@ var bodyParser = require('body-parser');
 var cors = require('cors');
 
 // load and configure genieApi
+var config = require('./config');
 var genieApi = require('genie.apiclient');
-genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret: '9be5a4eba01d0de93b67f2821156141d91dcf5e55662068d91715e8c8aa2924e'});
+genieApi.config(config);
 
 // load valid US airport codes for validation
 var fs = require("fs");
@@ -116,6 +117,12 @@ app.post('/events', function (req, res) {
 app.get('/', function(req, res){
     res.send("hello genie");
 });
+
+app.get('/avatar', function(req, res){
+    res.sendFile(__dirname+"/genie_avatar.jpg");
+});
+
+
 
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
