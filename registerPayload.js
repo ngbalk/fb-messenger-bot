@@ -1,7 +1,8 @@
 var genieApi = require('genie.apiclient');
+var config = require('./config');
 
 //genie api config
-genieApi.config({accessKey: '79ecbb99-fd8f-4dc7-9cfb-825c1d79fb29', accessSecret: '9be5a4eba01d0de93b67f2821156141d91dcf5e55662068d91715e8c8aa2924e'});
+genieApi.config(config);
 
 //create payload
 var payload = {
@@ -12,7 +13,7 @@ var payload = {
     description: {
         value: 'We track global flight price trends to find the cheapest trips for your group and help you plan your next reunion!'
     },
-    permissions: ['genie/global'],
+    permissions: ['genie/global','group/read/messages'],
     availability: '*',
     subscriptions: '*',
     // will change based on localtunnel 
@@ -64,6 +65,10 @@ var payload = {
                      value: 'save',
                 } 
     		},
+            {
+                type: 'permission',
+                permission: 'group/read/messages' 
+            },
             {
                 type: 'info',  
                 header: 'header_image',

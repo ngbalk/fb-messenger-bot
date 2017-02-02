@@ -18,14 +18,13 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
   var monthString = date.getFullYear() + '-' + ((''+(date.getMonth()+1)).length < 2 ? '0' + (date.getMonth()+1) : date.getMonth()+1);
   
   var rawData = callBrowseDatesAPI(originCodes, destinationCode, monthString, monthString);
-  
   var datesPriceMapping = {};
   for(var i=0;i<rawData.length;i++){
+
     var code = originCodes[i];
     var quoteSet = rawData[i];
     for(var j=0;j<quoteSet.Quotes.length;j++){
       quote = quoteSet.Quotes[j];
-
       // quote is not for roundtrip
       if(! (quote.OutboundLeg && quote.InboundLeg)){
         continue;
@@ -35,9 +34,22 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
       var datesKey = `${quote.OutboundLeg.DepartureDate} ${quote.InboundLeg.DepartureDate}`;
       if(!datesPriceMapping[datesKey]){
         datesPriceMapping[datesKey] = []
+        datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
       }
       else{
-        datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
+        // choose cheaper flight if multiple from same origin
+        var exists = false;
+        for(var p=0;p<datesPriceMapping[datesKey].length;p++){
+          if(code == datesPriceMapping[datesKey][p].code){ 
+              exists = true;
+              if(quote.MinPrice < datesPriceMapping[datesKey][p].price){
+                datesPriceMapping[datesKey][p]={code: code, price: quote.MinPrice};
+              }
+          }
+        }
+        if(!exists){
+          datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
+        }
       }
     }   
   }
