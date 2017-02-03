@@ -108,7 +108,7 @@ app.post('/events', function (req, res) {
             break;
 
             case 'content/message':
-                console.log(eventData);
+                console.log(validateMessage(eventData.payload.message.text));
         }
 	});
 });
@@ -122,8 +122,13 @@ app.get('/avatar', function(req, res){
     res.sendFile(__dirname+"/genie_avatar.jpg");
 });
 
-
-
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
 });
+
+function validateMessage(string){
+    if(string.startsWith("/trips ")){
+        return true;
+    }
+    return false;
+}
