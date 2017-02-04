@@ -104,7 +104,7 @@ app.post('/events', function (req, res) {
 
             case 'content/message':
                 if(validateMessage(eventData.payload.message.text)){
-                    var promise = fancyPanelGenerator(eventData.group.id, eventData.payload.message.text.split(" ")[1]);
+                    var promise = fancyPanelGenerator.generate(eventData.group.id, eventData.payload.message.text.split(" ")[1]);
                     promise.then(function(data){
                         genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
                                 console.log("sending /trips results");
