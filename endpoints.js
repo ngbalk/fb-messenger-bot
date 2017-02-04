@@ -1,12 +1,4 @@
-
-// configure database
-var firebase = require("firebase-admin");
-firebase.initializeApp({
-  credential: firebase.credential.cert("firebase-sdk-keys.json"),
-  databaseURL: "https://flights-genie.firebaseio.com"
-});
-// Get a reference to the database service
-var database = firebase.database();
+var database = require('./firebase-config.js');
 
 // setup express
 var express = require('express');
@@ -17,6 +9,9 @@ var cors = require('cors');
 var config = require('./config');
 var genieApi = require('genie.apiclient');
 genieApi.config(config);
+
+//load fancy pants generator
+var fancyPanelGenerator = require('./fancy-panel-generator');
 
 // load valid US airport codes for validation
 var fs = require("fs");
@@ -108,7 +103,14 @@ app.post('/events', function (req, res) {
             break;
 
             case 'content/message':
-                console.log(validateMessage(eventData.payload.message.text));
+                if(validateMessage(eventData.payload.message.text)){
+                    var promise = fancyPanelGenerator(eventData.group.id, eventData.payload.message.text.split(" ")[1]);
+                    promise.then(function(data){
+                        genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
+                                console.log("sending /trips results");
+                        });
+                    });
+                }
         }
 	});
 });
