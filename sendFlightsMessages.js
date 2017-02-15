@@ -18,7 +18,6 @@ genieApi.config(config);
         if(!allConfiguredUsers(id, groups[id], airportUserMapping)){
           continue;
         }
-        resetVotesForGroup(id);
         var dests = [];
         var origins = [];
         for(var i=0;i<groups[id].length;i++){
@@ -33,7 +32,7 @@ genieApi.config(config);
             index:i+1,
             title: dest.destinationName,
             description: 'group trips from $'+dest.totalCost,
-            on_tap: 'https://letsgetawaytoday.hopto.org/vote/'+id+'/'+dest.skyscannerCode
+            on_tap: "useraction://message?text='hello world'&id='abcd'"
           };
           items.push(item);
         }
@@ -51,10 +50,6 @@ genieApi.config(config);
     });
   });
 })();
-
-function resetVotesForGroup(groupId){
-  database.ref('/votes/'+groupId).set(null);
-}
 
 function allConfiguredUsers(id, group, airportUserMapping){
   var allConfigured=true;
