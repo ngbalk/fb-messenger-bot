@@ -10,8 +10,5 @@ do
     timeout --signal=SIGINT 40 sh /opt/genie/flights-genie/scripts/runFlights.sh
     echo 'send flights ran sleeping until vote results gets sent out'
     sleep 86400
-    timeout --signal=SIGINT 40 sh /opt/genie/flights-genie/scripts/runVotes.sh
-    echo 'votes was sent out sleeping now'
-    sleep 86400
     # sleep 86400 -- 24 hours
 done

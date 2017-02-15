@@ -146,7 +146,7 @@ app.listen(8080, function () {
 });
 
 function validateMessage(string){
-    if(string.startsWith("/trips ") && string.split(" ").length==2 && strings.split(" ")[1].length==3){
+    if(string.startsWith("/trips ") && string.split(" ").length==2 && string.split(" ")[1].length==3){
         return true;
     }
     return false;
