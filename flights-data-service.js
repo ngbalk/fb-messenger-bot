@@ -20,7 +20,6 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
   var rawData = callBrowseDatesAPI(originCodes, destinationCode, monthString, monthString);
   var datesPriceMapping = {};
   for(var i=0;i<rawData.length;i++){
-
     var code = originCodes[i];
     var quoteSet = rawData[i];
     for(var j=0;j<quoteSet.Quotes.length;j++){
