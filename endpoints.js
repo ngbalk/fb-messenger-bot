@@ -104,12 +104,17 @@ app.post('/events', function (req, res) {
 
             case 'content/message':
                 if(validateMessage(eventData.payload.message.text)){
-                    var promise = fancyPanelGenerator.generate(eventData.group.id, eventData.payload.message.text.split(" ")[1]);
+                    var promise = fancyPanelGenerator.generate(eventData.group.id, eventData.payload.message.text.split(" ")[1].toUpperCase());
                     promise.then(function(data){
                         genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
                                 console.log("sending /trips results");
                         });
                     });
+                }
+                else{
+                    // send a message
+                    var message = "request should be in the form:\t/trips XXX'"
+                    console.log("invalid request using /trips");
                 }
         }
 	});
@@ -124,12 +129,24 @@ app.get('/avatar', function(req, res){
     res.sendFile(__dirname+"/genie_avatar.jpg");
 });
 
+app.get('/header', function(req, res){
+    res.sendFile(__dirname+"/genie_header.png");
+});
+
+app.get('/chat', function(req, res){
+    res.sendFile(__dirname+"/genie_chat.png");
+});
+
+app.get('/gif', function(req, res){
+    res.sendFile(__dirname+"/genie_gif.png");
+});
+
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
 });
 
 function validateMessage(string){
-    if(string.startsWith("/trips ")){
+    if(string.startsWith("/trips ") && string.split(" ").length==2 && strings.split(" ")[1].length==3){
         return true;
     }
     return false;

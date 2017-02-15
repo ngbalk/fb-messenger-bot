@@ -26,11 +26,11 @@ var payload = {
         },
         {
             name: 'avatar_chat',
-            url: 'https://letsgetawaytoday.hopto.org/avatar',
+            url: 'https://letsgetawaytoday.hopto.org/chat',
         },
         {
             name: 'header_image',
-            url: 'https://letsgetawaytoday.hopto.org/avatar',
+            url: 'https://letsgetawaytoday.hopto.org/header',
         }
         ],
         profile: {

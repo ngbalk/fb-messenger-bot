@@ -16,7 +16,10 @@ fancyPanelGenerator.generate = function(groupId, destination){
 							for(var i in members){
 								var member = members[i];
 								var memberOriginAirport = airports[member];
-								groupOrigins.push(memberOriginAirport);
+								// origin airport is different than destination airport
+								if(memberOriginAirport!=destination){
+									groupOrigins.push(memberOriginAirport);	
+								}
 							}
 							var datesData = flightsService.getCheapestDates(groupOrigins, destination);
 							var panels = [];
