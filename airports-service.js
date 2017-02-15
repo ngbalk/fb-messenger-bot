@@ -28,7 +28,4 @@ airportsService.autocompleteAirportCode = function(cityNameString){
 	});
 }
 
-var promise = airportsService.autocompleteAirportCode(" ");
-promise.then(function(data){
-	console.log(data);
-});
+module.exports=airportsService;
