@@ -11,9 +11,9 @@ var payload = {
         value: 'Lets Get Away Genie'
     },
     description: {
-        value: 'We track global flight price trends to find the cheapest trips for your group and help you plan your next reunion!'
+        value: 'We track global flight price trends to find the cheapest trips for your group and help you plan your next reunion! \n\nType:  /trips <destination-code>\nEx.  /trips LAS (for trips to Las Vegas)'
     },
-    permissions: ['genie/global','group/read/messages'],
+    permissions: ['genie/global','group/read/messages', 'genie/floating'],
     availability: '*',
     subscriptions: '*',
     // will change based on localtunnel 
@@ -42,6 +42,25 @@ var payload = {
 	        	]
         	}
         },
+
+        floating: {
+  
+           //image reference key to be used (from client.images)
+           image: 'avatar',
+         
+           //one or more actions available to the user when the floating genie is clicked/tapped:
+           actions: [
+                   {
+                      //on_tap action
+                      on_tap: "useraction://message?text='hello world'&id='abcd'",
+                      label: {
+                        value: 'open website'
+                        }
+                    }
+                ],       
+  
+        },
+
         onboarding: [
     		{
 			    type: 'form',

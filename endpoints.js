@@ -1,3 +1,4 @@
+var airportsService = require('./airports-service');
 var database = require('./firebase-config.js');
 
 // setup express
@@ -103,19 +104,26 @@ app.post('/events', function (req, res) {
             break;
 
             case 'content/message':
-                if(validateMessage(eventData.payload.message.text)){
-                    var promise = fancyPanelGenerator.generate(eventData.group.id, eventData.payload.message.text.split(" ")[1].toUpperCase());
-                    promise.then(function(data){
-                        genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
-                                console.log("sending /trips results");
-                        });
+                var message = eventData.payload.message.text;
+                if(message.startsWith("/trips ")){
+                    var codePromise = airportsService.autocompleteAirportCode(message.substr(message.indexOf(' ')+1));
+                    codePromise.then(function(code){
+                        if(!codePromise){
+                            // send a message
+                            var message = "we couldn't find an airport code";
+                            console.log("couldn't find airport code");
+                        }
+                        else{
+                            var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
+                            panelPromise.then(function(data){
+                                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
+                                        console.log("sending /trips results");
+                                });
+                            });
+                        }
                     });
                 }
-                else{
-                    // send a message
-                    var message = "request should be in the form:\t/trips XXX'"
-                    console.log("invalid request using /trips");
-                }
+
         }
 	});
 });
@@ -125,18 +133,16 @@ app.get('/', function(req, res){
     res.send("hello genie");
 });
 
+// serve images
 app.get('/avatar', function(req, res){
     res.sendFile(__dirname+"/genie_avatar.jpg");
 });
-
 app.get('/header', function(req, res){
     res.sendFile(__dirname+"/genie_header.png");
 });
-
 app.get('/chat', function(req, res){
     res.sendFile(__dirname+"/genie_chat.png");
 });
-
 app.get('/gif', function(req, res){
     res.sendFile(__dirname+"/genie_gif.png");
 });
@@ -144,10 +150,3 @@ app.get('/gif', function(req, res){
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
 });
-
-function validateMessage(string){
-    if(string.startsWith("/trips ") && string.split(" ").length==2 && strings.split(" ")[1].length==3){
-        return true;
-    }
-    return false;
-}
