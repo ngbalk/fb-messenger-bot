@@ -109,21 +109,37 @@ flightsService.getTrips = function getTrips(originCities, scope){
     dest='US';
   }
   if(scope=='international'){
-    dest=='anywhere';
+    dest='anywhere';
   }
-  var tripsData = [];
+  var tripsDataPromises = [];
   for(var i=0;i<originCities.length;i++){
     originCity=originCities[i];
-    var xmlHttp = new XMLHttpRequest();
     var url = 'http://partners.api.skyscanner.net/apiservices/browsequotes/v1.0/US/USD/en-US/'+originCity+'/'+dest+'/anytime/anytime?apiKey='+apiKey;
-    xmlHttp.open("GET",url, false);
-    xmlHttp.send(null);
-    tripsData.push(JSON.parse(xmlHttp.responseText));
+    var promise = new Promise(function(resolve,reject){
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.open("GET",url);
+        xmlHttp.onload = function() {
+          if (xmlHttp.status == 200) {
+            resolve(JSON.parse(xmlHttp.responseText));
+          }
+          else {
+            reject(Error(xmlHttp.statusText));
+          }
+        };
+        xmlHttp.onerror = function() {
+          reject(Error("Network Error"));
+        };
+        xmlHttp.send(null);
+    });
+    tripsDataPromises.push(promise);
   }
-  return doParsing(tripsData);
+  return tripsDataPromises;
 }
 
-function doParsing(travelDataArray){
+/*
+* @travelDataArray - array of raw travel data
+*/
+flightsService.doParsing = function doParsing(travelDataArray){
   var travelDataObject=travelDataArray[0];
   if(!travelDataObject){
     return [];
