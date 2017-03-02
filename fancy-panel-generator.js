@@ -21,6 +21,10 @@ fancyPanelGenerator.generate = function(groupId, destination){
 									groupOrigins.push(memberOriginAirport);	
 								}
 							}
+							// don't do anything if no origins
+							if(groupOrigins.length==0){
+								return;
+							}
 							var datesDataPromise = flightsService.getCheapestDates(groupOrigins, destination);
 							datesDataPromise.then(function(datesData){
 								var panels = [];

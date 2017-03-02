@@ -108,7 +108,7 @@ app.post('/events', function (req, res) {
             case 'content/message':
                 var message = eventData.payload.message.text;
                 if(message.startsWith("/trips ")){
-		    var inputDestination = message.substr(message.indexOf(' ')+1);
+                    var inputDestination = message.substr(message.indexOf(' ')+1);
                     switch(inputDestination){
                         case 'DOMESTIC':
                             console.log("sending domestic flights");
