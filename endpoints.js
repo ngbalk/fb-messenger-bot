@@ -1,5 +1,7 @@
 var airportsService = require('./airports-service');
 var database = require('./firebase-config.js');
+var flightsService = require('./flights-data-service');
+var messagingService = require('./messaging-service');
 
 // setup express
 var express = require('express');
@@ -106,7 +108,7 @@ app.post('/events', function (req, res) {
             case 'content/message':
                 var message = eventData.payload.message.text;
                 if(message.startsWith("/trips ")){
-					var inputDestination = message.substr(message.indexOf(' ')+1);
+		    var inputDestination = message.substr(message.indexOf(' ')+1);
                     switch(inputDestination){
                         case 'DOMESTIC':
                             console.log("sending domestic flights");
@@ -185,7 +187,7 @@ function sendFlightsMessageToGroup(groupId, destination){
               }
             }
             var promises = flightsService.getTrips(origins,destination);
-            messagingService.sendFlightResultsToGroup(promises,id);
+            messagingService.sendFlightResultsToGroup(promises,groupId);
         });
     });
 }
