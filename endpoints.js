@@ -43,7 +43,7 @@ app.get('/vote/:groupKey/:choice', function(req, res){
     res.send("you voted for "+req.params.choice);
 });
 
-// POST /genie_profile 
+// POST /genie_profile
 app.post('/genie_profile', function (req, res) {
     genieApi.isValidClientRequest(req, function(userKey, cb){
         if(airportCodes.includes(req.body.airport.toUpperCase())){
@@ -62,7 +62,7 @@ app.post('/events', function (req, res) {
     genieApi.processEvent(currentUrl, req, res, function(err,eventData){
         if (err) return console.error(err);
         if (!eventData || !eventData.event) return;
- 
+
         switch(eventData.event.type){
             case 'subscription/success': break;
 
@@ -91,8 +91,8 @@ app.post('/events', function (req, res) {
                       }
                   });
                 });
-            break;      
-            
+            break;
+
             case 'member/added':
                 var groupsRef = database.ref('/groups/' + eventData.group.id);
                 var members = [];
@@ -106,29 +106,45 @@ app.post('/events', function (req, res) {
             case 'content/message':
                 var message = eventData.payload.message.text;
                 if(message.startsWith("/trips ")){
-                    var codePromise = airportsService.autocompleteAirportCode(message.substr(message.indexOf(' ')+1));
-                    codePromise.then(function(code){
-                        if(!codePromise){
-                            // send a message
-                            var message = "we couldn't find an airport code";
-                            console.log("couldn't find airport code");
-                        }
-                        else{
-                            var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
-                            panelPromise.then(function(data){
-                                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
-                                        console.log("sending /trips results");
-                                });
+					var inputDestination = message.substr(message.indexOf(' ')+1);
+                    switch(inputDestination){
+                        case 'DOMESTIC':
+                            console.log("sending domestic flights");
+                            sendFlightsMessageToGroup(eventData.group.id,"domestic");
+                        break;
+
+                        case 'INTERNATIONAL':
+                            console.log("sending international flights");
+                            sendFlightsMessageToGroup(eventData.group.id,"international");
+                        break;
+
+                        default:
+                            var codePromise = airportsService.autocompleteAirportCode(inputDestination);
+                            codePromise.then(function(code){
+                                if(!codePromise){
+                                    // send a message
+                                    var message = "we couldn't find an airport code";
+                                    console.log("couldn't find airport code");
+                                }
+                                else{
+                                    var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
+                                    panelPromise.then(function(data){
+                                        genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
+                                                console.log("sending /trips results");
+                                        });
+                                    });
+                                }
                             });
-                        }
-                    });
+
+                    }
+
                 }
 
         }
 	});
 });
 
-// GET / 
+// GET /
 app.get('/', function(req, res){
     res.send("hello genie");
 });
@@ -150,3 +166,26 @@ app.get('/gif', function(req, res){
 app.listen(8080, function () {
   console.log('Genie started on port 8080');
 });
+
+/*
+* Send flight messages to a single group
+* @groupId group to send flights to
+* @destination 'international' or 'domestic'
+*/
+function sendFlightsMessageToGroup(groupId, destination){
+    database.ref('/groups/'+groupId).once('value').then(function(groupSnapshot) {
+        database.ref('/airports').once('value').then(function(airportsSnapshot) {
+          var group = groupSnapshot.val();
+          var airportUserMapping = airportsSnapshot.val();
+            var origins = [];
+            for(var i=0;i<group.length;i++){
+              var member=group[i];
+              if(airportUserMapping[member]){
+                origins.push(airportUserMapping[member]);
+              }
+            }
+            var promises = flightsService.getTrips(origins,destination);
+            messagingService.sendFlightResultsToGroup(promises,id);
+        });
+    });
+}

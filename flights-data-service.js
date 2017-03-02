@@ -9,74 +9,79 @@ var flightsService = {};
 * @destinationCode - airport code of destination
 */
 flightsService.getCheapestDates = function(originCodes, destinationCode){
-  var date = new Date();
+  return new Promise(function(resolve,reject){
 
-  // look for flights next month
-  date.setMonth(date.getMonth()+1);
+    var date = new Date();
 
-  // convert date to two digit date
-  var monthString = date.getFullYear() + '-' + ((''+(date.getMonth()+1)).length < 2 ? '0' + (date.getMonth()+1) : date.getMonth()+1);
-  
-  var rawData = callBrowseDatesAPI(originCodes, destinationCode, monthString, monthString);
-  var datesPriceMapping = {};
-  for(var i=0;i<rawData.length;i++){
-    var code = originCodes[i];
-    var quoteSet = rawData[i];
-    for(var j=0;j<quoteSet.Quotes.length;j++){
-      quote = quoteSet.Quotes[j];
-      // quote is not for roundtrip
-      if(! (quote.OutboundLeg && quote.InboundLeg)){
-        continue;
-      }
+    // look for flights next month
+    date.setMonth(date.getMonth()+1);
 
-      //unique key to identify this date pair
-      var datesKey = `${quote.OutboundLeg.DepartureDate} ${quote.InboundLeg.DepartureDate}`;
-      if(!datesPriceMapping[datesKey]){
-        datesPriceMapping[datesKey] = []
-        datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
-      }
-      else{
-        // choose cheaper flight if multiple from same origin
-        var exists = false;
-        for(var p=0;p<datesPriceMapping[datesKey].length;p++){
-          if(code == datesPriceMapping[datesKey][p].code){ 
-              exists = true;
-              if(quote.MinPrice < datesPriceMapping[datesKey][p].price){
-                datesPriceMapping[datesKey][p]={code: code, price: quote.MinPrice};
-              }
+    // convert date to two digit date
+    var monthString = date.getFullYear() + '-' + ((''+(date.getMonth()+1)).length < 2 ? '0' + (date.getMonth()+1) : date.getMonth()+1);
+    
+    var rawDataPromises = callBrowseDatesAPI(originCodes, destinationCode, monthString, monthString);
+    Promise.all(rawDataPromises).then(function(rawData){
+      var datesPriceMapping = {};
+      for(var i=0;i<rawData.length;i++){
+        var code = originCodes[i];
+        var quoteSet = rawData[i];
+        for(var j=0;j<quoteSet.Quotes.length;j++){
+          quote = quoteSet.Quotes[j];
+          // quote is not for roundtrip
+          if(! (quote.OutboundLeg && quote.InboundLeg)){
+            continue;
           }
-        }
-        if(!exists){
-          datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
-        }
+
+          //unique key to identify this date pair
+          var datesKey = `${quote.OutboundLeg.DepartureDate} ${quote.InboundLeg.DepartureDate}`;
+          if(!datesPriceMapping[datesKey]){
+            datesPriceMapping[datesKey] = []
+            datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
+          }
+          else{
+            // choose cheaper flight if multiple from same origin
+            var exists = false;
+            for(var p=0;p<datesPriceMapping[datesKey].length;p++){
+              if(code == datesPriceMapping[datesKey][p].code){ 
+                  exists = true;
+                  if(quote.MinPrice < datesPriceMapping[datesKey][p].price){
+                    datesPriceMapping[datesKey][p]={code: code, price: quote.MinPrice};
+                  }
+              }
+            }
+            if(!exists){
+              datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
+            }
+          }
+        }   
       }
-    }   
-  }
 
 
-  // find min key-value pair in map
-  var dates = Object.keys(datesPriceMapping).reduce(function(a, b){
+      // find min key-value pair in map
+      var dates = Object.keys(datesPriceMapping).reduce(function(a, b){
 
-    // flight exists for each origin
-    if(datesPriceMapping[a].length < originCodes.length){
-      return b;
-    }
-    if(datesPriceMapping[b].length < originCodes.length){
-      return a;
-    }
+        // flight exists for each origin
+        if(datesPriceMapping[a].length < originCodes.length){
+          return b;
+        }
+        if(datesPriceMapping[b].length < originCodes.length){
+          return a;
+        }
 
-    // return the date with smallest sum of prices
-    return datesPriceMapping[a].reduce(function(x, y){return x+parseFloat(y.price)},0)
-    < datesPriceMapping[b].reduce(function(x, y){return x+parseFloat(y.price)},0) ? a : b 
+        // return the date with smallest sum of prices
+        return datesPriceMapping[a].reduce(function(x, y){return x+parseFloat(y.price)},0)
+        < datesPriceMapping[b].reduce(function(x, y){return x+parseFloat(y.price)},0) ? a : b 
+      });
+
+      var price = datesPriceMapping[dates];
+      resolve({
+        outboundDate: getDateFromString(dates.split(" ")[0]),
+        inboundDate: getDateFromString(dates.split(" ")[1]),
+        totalPrice: price
+      });
+    });
+
   });
-
-  var price = datesPriceMapping[dates];
-
-  return {
-    outboundDate: getDateFromString(dates.split(" ")[0]),
-    inboundDate: getDateFromString(dates.split(" ")[1]),
-    totalPrice: price
-  }
 
   function getDateFromString(dateString){
     dateString = dateString.split("T")[0];
@@ -86,16 +91,29 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
 }
 
 function callBrowseDatesAPI(originCodes, destinationCode, departureDateString, returnDateString){
-  var tripsData = [];   
+  var tripsDataPromises = [];   
   for(var i=0;i<originCodes.length;i++){
     originCode=originCodes[i];
-    var xmlHttp = new XMLHttpRequest();
     var url = `http://partners.api.skyscanner.net/apiservices/browsedates/v1.0/US/USD/en-US/${originCode}/${destinationCode}/${departureDateString}/${returnDateString}?apiKey=${apiKey}`;
-    xmlHttp.open("GET",url, false);
-    xmlHttp.send(null);
-    tripsData.push(JSON.parse(xmlHttp.responseText));
+    var promise = new Promise(function(resolve,reject){
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.open("GET",url);
+        xmlHttp.onload = function() {
+          if (xmlHttp.status == 200) {
+            resolve(JSON.parse(xmlHttp.responseText));
+          }
+          else {
+            reject(Error(xmlHttp.statusText));
+          }
+        };
+        xmlHttp.onerror = function() {
+          reject(Error("Network Error"));
+        };
+        xmlHttp.send(null);
+    });
+    tripsDataPromises.push(promise);
   }
-  return tripsData;
+  return tripsDataPromises;
 }
 
 
