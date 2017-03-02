@@ -11,12 +11,11 @@ var payload = {
         value: 'Lets Get Away Genie'
     },
     description: {
-        value: 'We track global flight price trends to find the cheapest trips for your group and help you plan your next reunion! \n\nType:  /trips <destination-code>\nEx.  /trips LAS (for trips to Las Vegas)'
+        value: 'We analyze global flight price trends to find the cheapest trips for your group and help you plan your next reunion! \n\nType:  /trips <destination-code>\nEx.  /trips LAS (for trips to Las Vegas)'
     },
     permissions: ['genie/global','group/read/messages', 'genie/floating'],
     availability: '*',
     subscriptions: '*',
-    // will change based on localtunnel 
     configure_url: 'https://letsgetawaytoday.hopto.org/genie_profile',
     client: {
         images: [
@@ -52,9 +51,16 @@ var payload = {
            actions: [
                    {
                       //on_tap action
-                      on_tap: "useraction://message?text='hello world'&id='abcd'",
+                      on_tap: "useraction://message?text=/trips DOMESTIC&id=''",
                       label: {
-                        value: 'open website'
+                        value: 'domestic trips'
+                        }
+                    },
+                    {
+                      //on_tap action
+                      on_tap: "useraction://message?text=/trips INTERNATIONAL&id=''",
+                      label: {
+                        value: 'international trips'
                         }
                     }
                 ],       
@@ -139,6 +145,7 @@ genieApi.post('/genies/payloads', payload, function(e,r,b){
 		console.error('payload registration failed with http statusCode', r.statusCode);
 		process.exit(1);
 	}
+    console.log("payload id: "+b.id);
 	//payload registration was succesfull, let's activate this new payload id
 	genieApi.put('/genies/payloads/' + b.id, null, function(e,r,b){
 		if (e){

@@ -16,7 +16,7 @@ messagingService.sendFlightResultsToGroup = function(promises, groupId){
         index:i+1,
         title: dest.destinationName,
         description: 'group trips from $'+dest.totalCost,
-        on_tap: "useraction://message?text='hello world'&id='abcd'"
+        on_tap: "useraction://message?text=/trips "+dest.skyscannerCode+"&id=''"
       };
       items.push(item);
     }
