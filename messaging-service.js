@@ -28,7 +28,7 @@ messagingService.sendFlightResultsToGroup = function(promises, groupId){
       } 
     };
     genieApi.post('/genies/groups/'+groupId+'/message', data, function(e,r,b){
-      console.log("sending message");
+      console.log("sending flights list to group "+groupId);
     });
   });
 }

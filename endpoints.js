@@ -111,12 +111,12 @@ app.post('/events', function (req, res) {
                     var inputDestination = message.substr(message.indexOf(' ')+1);
                     switch(inputDestination){
                         case 'DOMESTIC':
-                            console.log("sending domestic flights");
+                            console.log("domestic flights request received from group "+eventData.group.id);
                             sendFlightsMessageToGroup(eventData.group.id,"domestic");
                         break;
 
                         case 'INTERNATIONAL':
-                            console.log("sending international flights");
+                            console.log("international flights request received from group "+eventData.group.id);
                             sendFlightsMessageToGroup(eventData.group.id,"international");
                         break;
 
@@ -132,7 +132,7 @@ app.post('/events', function (req, res) {
                                     var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
                                     panelPromise.then(function(data){
                                         genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
-                                                console.log("sending /trips results");
+                                                console.log("sending /trips results to group "+eventData.group.id);
                                         });
                                     });
                                 }
