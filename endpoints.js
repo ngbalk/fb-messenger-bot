@@ -170,16 +170,16 @@ app.get('/', function(req, res){
 });
 
 // serve images
-app.get('/avatar', function(req, res){
+app.get('/avatar.jpg', function(req, res){
     res.sendFile(__dirname+"/genie_avatar.jpg");
 });
-app.get('/header', function(req, res){
+app.get('/header.jpg', function(req, res){
     res.sendFile(__dirname+"/genie_header.jpg");
 });
-app.get('/chat', function(req, res){
+app.get('/chat.jpg', function(req, res){
     res.sendFile(__dirname+"/genie_chat.jpg");
 });
-app.get('/gif', function(req, res){
+app.get('/gif.jpg', function(req, res){
     res.sendFile(__dirname+"/genie_gif.jpg");
 });
 

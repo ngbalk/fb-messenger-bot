@@ -21,15 +21,15 @@ var payload = {
         images: [
         {
             name: 'avatar',
-            url: 'https://letsgetawaytoday.hopto.org/avatar',
+            url: 'https://letsgetawaytoday.hopto.org/avatar.jpg',
         },
         {
             name: 'avatar_chat',
-            url: 'https://letsgetawaytoday.hopto.org/chat',
+            url: 'https://letsgetawaytoday.hopto.org/chat.jpg',
         },
         {
             name: 'header_image',
-            url: 'https://letsgetawaytoday.hopto.org/header',
+            url: 'https://letsgetawaytoday.hopto.org/header.jpg',
         }
         ],
         profile: {
