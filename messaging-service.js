@@ -12,6 +12,9 @@ messagingService.sendFlightResultsToGroup = function(promises, groupId){
     var items = [];
     for(var i=0;i<10;i++){
       dest=dests[i];
+      if(!dest){
+        continue;
+      }
       var item = {
         index:i+1,
         title: dest.destinationName,
