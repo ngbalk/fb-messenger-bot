@@ -17,7 +17,7 @@ fancyPanelGenerator.generate = function(groupId, destination){
 								var member = members[i];
 								var memberOriginAirport = airports[member];
 								// origin airport is different than destination airport
-								if(memberOriginAirport!=destination){
+								if(memberOriginAirport!=destination && memberOriginAirport!=null){
 									groupOrigins.push(memberOriginAirport);	
 								}
 							}
