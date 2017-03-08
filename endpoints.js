@@ -158,13 +158,13 @@ app.get('/avatar', function(req, res){
     res.sendFile(__dirname+"/genie_avatar.jpg");
 });
 app.get('/header', function(req, res){
-    res.sendFile(__dirname+"/genie_header.png");
+    res.sendFile(__dirname+"/genie_header.jpg");
 });
 app.get('/chat', function(req, res){
-    res.sendFile(__dirname+"/genie_chat.png");
+    res.sendFile(__dirname+"/genie_chat.jpg");
 });
 app.get('/gif', function(req, res){
-    res.sendFile(__dirname+"/genie_gif.png");
+    res.sendFile(__dirname+"/genie_gif.jpg");
 });
 
 app.listen(8080, function () {
