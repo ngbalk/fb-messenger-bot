@@ -56,6 +56,10 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
         }   
       }
 
+      // No results, so reject
+      if(Object.keys(datesPriceMapping).length==0){
+        reject(new Error('Could not find trips for destination '+destinationCode+' from origins '+originCodes));
+      }
 
       // find min key-value pair in map
       var dates = Object.keys(datesPriceMapping).reduce(function(a, b){

@@ -120,6 +120,13 @@ fancyPanelGenerator.generate = function(groupId, destination){
 						     			}
 					        	};
 					        	resolve(data);
+							}).catch(function(e){
+								console.log(e);
+								var data = {
+									text: 'We could not find any trips to that destination',
+									display_unit: 'default'
+								}
+								resolve(data);
 							});
 						});				
 					});
