@@ -16,12 +16,11 @@ airportsService.autocompleteAirportCode = function(cityNameString){
 					resolve(jsonObj.response.airports[0].code);
 				}
 				else{
-					console.log("cannot resolve airport code from location name");
-					resolve(false);
+					throw new Error("Could not resolve airport code from input destination name: "+cityNameString);
 				}
 			}
 			else{
-				console.log(xhr.statusText);
+				throw new Error(xhr.statusText);
 			}
 		}
 		xhr.send(null);

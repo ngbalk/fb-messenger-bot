@@ -123,19 +123,21 @@ app.post('/events', function (req, res) {
                         default:
                             var codePromise = airportsService.autocompleteAirportCode(inputDestination);
                             codePromise.then(function(code){
-                                if(!codePromise){
-                                    // send a message
-                                    var message = "we couldn't find an airport code";
-                                    console.log("couldn't find airport code");
-                                }
-                                else{
-                                    var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
-                                    panelPromise.then(function(data){
-                                        genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
-                                                console.log("sending /trips results to group "+eventData.group.id);
-                                        });
+
+                                var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
+                                panelPromise.then(function(data){
+                                    genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
+                                            console.log("sending /trips results to group "+eventData.group.id);
                                     });
-                                }
+                                });
+                            }).catch(function(e){
+                                console.log(e);
+                                var data = 
+                                    {
+                                        text: "Sorry, we couldn't find a matching airport code for your request.",
+                                        display_unit: "default"
+                                    };
+                                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){});
                             });
 
                     }
