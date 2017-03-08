@@ -76,6 +76,14 @@ app.post('/events', function (req, res) {
             		members.push(eventData.payload.members[i].id);
             	}
                 groupsRef.set(members);
+
+                // Just added the genie, so tell people to configure it
+                var data = 
+                    {
+                        text: "You added the Lets Get Away Genie! You're awesome!  Now make sure to configure the genie with your preferences under the genie profile so we can start working for you!",
+                        display_unit: "default"
+                    };
+                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){});
             break;
 
             case 'genie/removed':
@@ -103,6 +111,14 @@ app.post('/events', function (req, res) {
                     console.log('member ' + eventData.payload.members[i].id + ' added to group');
                 }
                 groupsRef.set(members);
+
+                // a new member was added, so send message telling them to configure their genie genie_profile
+                var data = 
+                    {
+                        text: "You just added a new member to the group! Make sure to configure your airport code and accept our permissions requests in our genie profile so we can start working for you!",
+                        display_unit: "default"
+                    };
+                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){});
             break;
 
             case 'content/message':
