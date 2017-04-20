@@ -124,6 +124,7 @@ function callBrowseDatesAPI(originCodes, destinationCode, departureDateString, r
 /*
 * @originCities - array of airport codes
 * @scope - 'domestic' or 'international'
+* returns Promises, containing cheapest destinations
 */
 flightsService.getTrips = function getTrips(originCities, scope){
   var dest = null;

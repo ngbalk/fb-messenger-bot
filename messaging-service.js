@@ -1,8 +1,4 @@
-var genieApi = require('genie.apiclient');
-var config = require('./config');
 var flightsService = require('./flights-data-service');
-
-genieApi.config(config);
 
 var messagingService = {};
 

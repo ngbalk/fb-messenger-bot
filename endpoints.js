@@ -1,5 +1,5 @@
 var airportsService = require('./airports-service');
-var database = require('./firebase-config.js');
+// var database = require('./firebase-config.js');
 var flightsService = require('./flights-data-service');
 var messagingService = require('./messaging-service');
 
@@ -7,14 +7,6 @@ var messagingService = require('./messaging-service');
 var express = require('express');
 var bodyParser = require('body-parser');
 var cors = require('cors');
-
-// load and configure genieApi
-var config = require('./config');
-var genieApi = require('genie.apiclient');
-genieApi.config(config);
-
-//load fancy pants generator
-var fancyPanelGenerator = require('./fancy-panel-generator');
 
 // load valid US airport codes for validation
 var fs = require("fs");
@@ -26,165 +18,79 @@ var app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-// GET /genie_profile
-app.get('/genie_profile', function (req, res) {
-	console.log("getting configuration");
-    database.ref('/airports/' + req.query.blendKey).once('value').then(function(dataSnapshot) {
-        var retData = { data : [{
-                        name: 'airport',
-                        value: dataSnapshot.val()
-                    }]};
-        res.status(200).json(retData).end();
+//Page Access Token EAAKNgXSzsvABAPhNDJz2yZCiFocO3nNYKBP49N02YQ6szwA0AQent404SGDTL1tKYwJ2N7SoG6A0CeIiwRSbH6cwmarDLlS9Mxy0ZBjRRAXNdRVOvZCx56PYr1i7bT7Ura92nRn8dh8XMnZAvUxD26p1ZC5D7bzJNZCIRkysm1NAZDZD
+
+// GET /webhook
+app.get('/webhook', function (req, res) {
+	console.log("subscribing via webhook");
+if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === "cooking_with_the_sauce") {
+    console.log("Validating webhook");
+    res.status(200).send(req.query['hub.challenge']);
+} 
+else {
+    console.error("Failed validation. Make sure the validation tokens match.");
+    res.sendStatus(403);          
+}  
+
+});
+
+// POST /webhook
+app.post('/webhook', function (req, res) {
+    var data = req.body;
+
+  if (data.object === 'page') {
+    // Iterate over each entry - there may be multiple if batched
+    data.entry.forEach(function(entry) {
+        var pageID = entry.id;
+        var timeOfEvent = entry.time;
+        entry.messaging.forEach(function(event) {
+            if (event.message) {
+                processMessage(event);
+            } 
+            else {
+                console.log("Webhook received unknown event: ", event);
+            }
+        });
     });
-
+    res.sendStatus(200);
+  }
 });
 
-// GET /vote/:groupKey/:choice
-app.get('/vote/:groupKey/:choice', function(req, res){
-    database.ref('/votes/'+req.params.groupKey).push(req.params.choice);
-    res.send("you voted for "+req.params.choice);
-});
+function processMessage(event){
+    var senderID = event.sender.id;
+    var recipientID = event.recipient.id;
+    var timeOfMessage = event.timestamp;
+    var message = event.message;
 
-// POST /genie_profile
-app.post('/genie_profile', function (req, res) {
-    genieApi.isValidClientRequest(req, function(userKey, cb){
-        if(airportCodes.includes(req.body.airport.toUpperCase())){
-            database.ref('/airports/' + userKey).set(req.body.airport.toUpperCase());
-            res.status(200).end();
+    console.log("Received message for user %d and page %d at %d with message:", senderID, recipientID, timeOfMessage);
+    console.log(JSON.stringify(message));
+
+    var messageId = message.mid;
+
+    var messageText = message.text;
+    var messageAttachments = message.attachments;
+
+    if (messageText) {
+
+        switch (messageText) {
+            case 'flights':
+                // flightsService.getTrips(['JFK','LAX','domestic']);
+            break;
+
+            default:
+                //doSomethingElse
         }
-        else{
-            res.status(401).json({error: "please enter a valid airport code"}).end();
-        }
-    });
-});
+    }
+}
 
-// POST /events
-app.post('/events', function (req, res) {
-    var currentUrl = 'https://letsgetawaytoday.hopto.org/events';
-    genieApi.processEvent(currentUrl, req, res, function(err,eventData){
-        if (err) return console.error(err);
-        if (!eventData || !eventData.event) return;
-
-        switch(eventData.event.type){
-            case 'subscription/success': break;
-
-            case 'genie/added':
-                var groupsRef = database.ref('/groups/' + eventData.group.id);
-                var members = [];
-            	console.log('added to group', eventData.group.id);
-            	for(var i in eventData.payload.members){
-            		members.push(eventData.payload.members[i].id);
-            	}
-                groupsRef.set(members);
-
-                // Just added the genie, so tell people to configure it
-                var data = 
-                    {
-                        text: "You added the Lets Get Away Genie! You're awesome!  Now make sure to configure the genie with your preferences under the genie profile so we can start working for you!",
-                        display_unit: "default"
-                    };
-                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){});
-            break;
-
-            case 'genie/removed':
-                database.ref('/groups/' + eventData.group.id).remove();
-            	console.log('removed from group', eventData.group.id);
-            break;
-
-            case 'member/leave' || 'member/removed':
-                var groupsRef = database.ref('/groups/' + eventData.group.id);
-                groupsRef.once("value").then(function(groupSnapshot) {
-                    groupSnapshot.forEach(function(memberSnapshot) {
-                      if(eventData.payload.members.contains(memberSnapshot.val())){
-                        memberSnapshot.ref().remove();
-                        console.log('member ' + memberSnapshot.val() + ' left from group');
-                      }
-                  });
-                });
-            break;
-
-            case 'member/added':
-                var groupsRef = database.ref('/groups/' + eventData.group.id);
-                var members = [];
-                for(var i in eventData.payload.members){
-                    members.push(eventData.payload.members[i].id);
-                    console.log('member ' + eventData.payload.members[i].id + ' added to group');
-                }
-                groupsRef.set(members);
-
-                // a new member was added, so send message telling them to configure their genie genie_profile
-                var data = 
-                    {
-                        text: "You just added a new member to the group! Make sure to configure your airport code and accept our permissions requests in our genie profile so we can start working for you!",
-                        display_unit: "default"
-                    };
-                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){});
-            break;
-
-            case 'content/message':
-                var message = eventData.payload.message.text;
-                if(message.startsWith("/trips ")){
-                    var inputDestination = message.substr(message.indexOf(' ')+1);
-                    switch(inputDestination){
-                        case 'DOMESTIC':
-                            console.log("domestic flights request received from group "+eventData.group.id);
-                            sendFlightsMessageToGroup(eventData.group.id,"domestic");
-                        break;
-
-                        case 'INTERNATIONAL':
-                            console.log("international flights request received from group "+eventData.group.id);
-                            sendFlightsMessageToGroup(eventData.group.id,"international");
-                        break;
-
-                        default:
-                            var codePromise = airportsService.autocompleteAirportCode(inputDestination);
-                            codePromise.then(function(code){
-
-                                var panelPromise = fancyPanelGenerator.generate(eventData.group.id, code);
-                                panelPromise.then(function(data){
-                                    genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){
-                                            console.log("sending /trips results to group "+eventData.group.id);
-                                    });
-                                });
-                            }).catch(function(e){
-                                console.log(e);
-                                var data = 
-                                    {
-                                        text: "Sorry, we couldn't find a matching airport code for your request.",
-                                        display_unit: "default"
-                                    };
-                                genieApi.post('/genies/groups/'+eventData.group.id+'/message', data, function(e,r,b){});
-                            });
-
-                    }
-
-                }
-
-        }
-	});
-});
 
 // GET /
 app.get('/', function(req, res){
-    res.send("hello genie");
-});
-
-// serve images
-app.get('/avatar.jpg', function(req, res){
-    res.sendFile(__dirname+"/genie_avatar.jpg");
-});
-app.get('/header.jpg', function(req, res){
-    res.sendFile(__dirname+"/genie_header.jpg");
-});
-app.get('/chat.jpg', function(req, res){
-    res.sendFile(__dirname+"/genie_chat.jpg");
-});
-app.get('/gif.jpg', function(req, res){
-    res.sendFile(__dirname+"/genie_gif.jpg");
+    res.send("hello facebook bot");
 });
 
 app.listen(8080, function () {
-  console.log('Genie started on port 8080');
+  console.log('FbM bot started on port 8080');
 });
 
 /*
