@@ -2,11 +2,15 @@ var airportsService = require('./airports-service');
 // var database = require('./firebase-config.js');
 var flightsService = require('./flights-data-service');
 var messagingService = require('./messaging-service');
+var templatizer = require('./templatizer');
 
 // setup express
 var express = require('express');
 var bodyParser = require('body-parser');
 var cors = require('cors');
+
+// load request
+var request = require('request');
 
 // load valid US airport codes for validation
 var fs = require("fs");
@@ -18,7 +22,9 @@ var app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-//Page Access Token EAAKNgXSzsvABAPhNDJz2yZCiFocO3nNYKBP49N02YQ6szwA0AQent404SGDTL1tKYwJ2N7SoG6A0CeIiwRSbH6cwmarDLlS9Mxy0ZBjRRAXNdRVOvZCx56PYr1i7bT7Ura92nRn8dh8XMnZAvUxD26p1ZC5D7bzJNZCIRkysm1NAZDZD
+// properties
+var listSize = 4; // max value allowed in list is 4
+var PAGE_ACCESS_TOKEN = "EAAKNgXSzsvABAOrhZBc5LZBbYoJWiIPxZCSjpRmZCt0AzWgVxLdxWGXnD74wgh4MbmJOwYwQKH9l4UjHjZBFlFPTtKb91lcdh97qlpGKlCBJtU9DLBOAlb9aphaatrjAsh6odjVAZCZClbGTzLjIUXxdZCmCXjccqjm4lAK2PabO6AZDZD";
 
 // GET /webhook
 app.get('/webhook', function (req, res) {
@@ -45,7 +51,12 @@ app.post('/webhook', function (req, res) {
         var timeOfEvent = entry.time;
         entry.messaging.forEach(function(event) {
             if (event.message) {
-                processMessage(event);
+                try{
+                    processMessage(event);
+                }
+                catch(err){
+                    console.log(err);
+                }
             } 
             else {
                 console.log("Webhook received unknown event: ", event);
@@ -61,6 +72,7 @@ function processMessage(event){
     var recipientID = event.recipient.id;
     var timeOfMessage = event.timestamp;
     var message = event.message;
+    console.log(event.recipient.id);
 
     console.log("Received message for user %d and page %d at %d with message:", senderID, recipientID, timeOfMessage);
     console.log(JSON.stringify(message));
@@ -70,11 +82,21 @@ function processMessage(event){
     var messageText = message.text;
     var messageAttachments = message.attachments;
 
+    var messageData = {};
+    messageData.recipient = {id : senderID};
+    // messageData.message = {text: messageText};
+
     if (messageText) {
 
         switch (messageText) {
             case 'flights':
-                // flightsService.getTrips(['JFK','LAX','domestic']);
+                var promise = flightsService.getCheapestCommonDestinationTrips(['JFK','LAX'],'domestic');
+                promise.then(function(data){
+                    var message = templatizer.generateListTemplateMessage(data, listSize);
+                    messageData.message = message;
+                    console.log(messageData);
+                    callSendAPI(messageData);
+                });
             break;
 
             default:
@@ -114,4 +136,27 @@ function sendFlightsMessageToGroup(groupId, destination){
             messagingService.sendFlightResultsToGroup(promises,groupId);
         });
     });
+}
+
+
+function callSendAPI(messageData) {
+  request({
+    uri: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: { access_token: PAGE_ACCESS_TOKEN },
+    method: 'POST',
+    json: messageData
+
+  }, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var recipientId = body.recipient_id;
+      var messageId = body.message_id;
+
+      console.log("Successfully sent generic message with id %s to recipient %s", 
+        messageId, recipientId);
+    } else {
+      console.error("Unable to send message.");
+      console.error(response.body);
+      console.error(error);
+    }
+  });  
 }

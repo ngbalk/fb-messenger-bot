@@ -4,6 +4,22 @@ var apiKey='prtl6749387986743898559646983194';
 
 var flightsService = {};
 
+/**
+ * Retrieve and parse commond destination trip data.
+ * @originCodes - array of airport codes
+ * @scope - 'domestic' or 'international'
+ * Returns promise resolving to common destination trip data
+ */
+flightsService.getCheapestCommonDestinationTrips = function(originCodes, scope){
+  var promises = flightsService.getTrips(originCodes, scope);
+  return new Promise(function(resolve,reject){
+    Promise.all(promises).then(function(data){
+      var dests = flightsService.doParsing(data);
+      resolve(dests);
+    });
+  });
+}
+
 /*
 * @originCodes - array of airport codes
 * @destinationCode - airport code of destination
