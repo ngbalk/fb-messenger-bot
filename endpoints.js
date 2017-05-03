@@ -88,7 +88,7 @@ function processMessage(event){
     messageData.recipient = {id : senderID};
 
     if (messageText) {
-        
+
         // initialize this user in map
         if(!(senderID in userOriginsMap)){
             userOriginsMap[senderID] = [];
@@ -187,7 +187,6 @@ function callSendAPI(messageData) {
         messageId, recipientId);
     } else {
       console.error("Unable to send message.");
-      console.error(response.body);
       console.error(error);
     }
   });  

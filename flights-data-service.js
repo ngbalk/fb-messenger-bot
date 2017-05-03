@@ -19,115 +19,94 @@ var flightsService = {};
 * @destinationCode - airport code of destination
 */
 flightsService.getCheapestDates = function(originCodes, destinationCode){
+  
   return new Promise(function(resolve,reject){
 
-    var date = new Date();
+    // Create destination table
+    knex.schema.createTable('destinations', function(table) {
+      table.increments('id');
+      table.integer('destination_id');
+      table.string('airport_name');
+      table.string('iata_code');
+      table.string('city_name');
+    })
+    // Create quotes table
+    .createTable('quotes',function(table){
+      table.increments('id');
+      table.integer('quote_id');
+      table.integer('origin');
+      table.integer('destination_id').references('destinations.destination_id');
+      table.integer('price');
+      table.date('outbound_date');
+      table.date('inbound_date');
+    })
+    .then(function(){
 
-    // look for flights next month
-    date.setMonth(date.getMonth()+1);
+      var date = new Date();
 
-    // convert date to two digit date
-    var monthString = date.getFullYear() + '-' + ((''+(date.getMonth()+1)).length < 2 ? '0' + (date.getMonth()+1) : date.getMonth()+1);
-    
-    var rawDataPromises = callBrowseDatesAPI(originCodes, destinationCode, monthString, monthString);
-    Promise.all(rawDataPromises).then(function(rawData){
-      var datesPriceMapping = {};
-      for(var i=0;i<rawData.length;i++){
-        var code = originCodes[i];
-        var quoteSet = rawData[i];
-        for(var j=0;j<quoteSet.Quotes.length;j++){
-          quote = quoteSet.Quotes[j];
-          // quote is not for roundtrip
-          if(! (quote.OutboundLeg && quote.InboundLeg)){
-            continue;
-          }
+      // look for flights next month
+      date.setMonth(date.getMonth()+1);
 
-          //unique key to identify this date pair
-          var datesKey = `${quote.OutboundLeg.DepartureDate} ${quote.InboundLeg.DepartureDate}`;
-          if(!datesPriceMapping[datesKey]){
-            datesPriceMapping[datesKey] = []
-            datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
-          }
-          else{
-            // choose cheaper flight if multiple from same origin
-            var exists = false;
-            for(var p=0;p<datesPriceMapping[datesKey].length;p++){
-              if(code == datesPriceMapping[datesKey][p].code){ 
-                  exists = true;
-                  if(quote.MinPrice < datesPriceMapping[datesKey][p].price){
-                    datesPriceMapping[datesKey][p]={code: code, price: quote.MinPrice};
-                  }
-              }
-            }
-            if(!exists){
-              datesPriceMapping[datesKey].push({code: code, price: quote.MinPrice});
-            }
-          }
-        }   
-      }
+      // convert date to two digit date
+      var monthString = date.getFullYear() + '-' + ((''+(date.getMonth()+1)).length < 2 ? '0' + (date.getMonth()+1) : date.getMonth()+1);
+      
+      var tripsDataPromises = [];   
+      for(var i=0;i<originCodes.length;i++){
+      tripsDataPromises.push(new Promise(function(resolve,reject){
 
-      // No results, so reject
-      if(Object.keys(datesPriceMapping).length==0){
-        reject(new Error('Could not find trips for destination '+destinationCode+' from origins '+originCodes));
-      }
+        originCode=originCodes[i];
+        var url = `http://partners.api.skyscanner.net/apiservices/browsedates/v1.0/US/USD/en-US/${originCode}/${destinationCode}/${monthString}/${monthString}?apiKey=${apiKey}`;
+        request({
+          uri: url,
+          method: 'GET'
+        }, function(error, response, body){
+          if (!error && response.statusCode == 200) {
+                
+              var knexPromises = [];
 
-      // find min key-value pair in map
-      var dates = Object.keys(datesPriceMapping).reduce(function(a, b){
+              var data = JSON.parse(body);
 
-        // flight exists for each origin
-        if(datesPriceMapping[a].length < originCodes.length){
-          return b;
-        }
-        if(datesPriceMapping[b].length < originCodes.length){
-          return a;
-        }
+              // insert quotes into db
+              var quotes = data.Quotes;
+              
+              quotes.forEach(function(value){
 
-        // return the date with smallest sum of prices
-        return datesPriceMapping[a].reduce(function(x, y){return x+parseFloat(y.price)},0)
-        < datesPriceMapping[b].reduce(function(x, y){return x+parseFloat(y.price)},0) ? a : b 
-      });
+                // ensure has a return leg
+                if(!value.InboundLeg || !value.OutboundLeg){
+                  return;
+                }
 
-      var price = datesPriceMapping[dates];
-      resolve({
-        outboundDate: getDateFromString(dates.split(" ")[0]),
-        inboundDate: getDateFromString(dates.split(" ")[1]),
-        totalPrice: price
-      });
-    });
+                var promise = new Promise(function(resolve,reject){knex.insert({quote_id:value.QuoteId, origin:value.OutboundLeg.OriginId, destination_id:value.OutboundLeg.DestinationId, outbound_date:value.OutboundLeg.DepartureDate, inbound_date:value.InboundLeg.DepartureDate, price:value.MinPrice}).into('quotes').then(resolve())});
+                knexPromises.push(promise);
+              });  
 
-  });
-
-  function getDateFromString(dateString){
-    dateString = dateString.split("T")[0];
-    var yearMonthDay = dateString.split("-");
-    return new Date(yearMonthDay[0],yearMonthDay[1]-1,yearMonthDay[2]) 
-  }
-}
-
-function callBrowseDatesAPI(originCodes, destinationCode, departureDateString, returnDateString){
-  var tripsDataPromises = [];   
-  for(var i=0;i<originCodes.length;i++){
-    originCode=originCodes[i];
-    var url = `http://partners.api.skyscanner.net/apiservices/browsedates/v1.0/US/USD/en-US/${originCode}/${destinationCode}/${departureDateString}/${returnDateString}?apiKey=${apiKey}`;
-    var promise = new Promise(function(resolve,reject){
-        var xmlHttp = new XMLHttpRequest();
-        xmlHttp.open("GET",url);
-        xmlHttp.onload = function() {
-          if (xmlHttp.status == 200) {
-            resolve(JSON.parse(xmlHttp.responseText));
+              // insert destinations into db
+              var destinations = data.Places;
+              destinations.forEach(function(value){
+                var promise = new Promise(function(resolve,reject){knex.insert({destination_id:value.PlaceId, airport_name:value.Name, iata_code:value.IataCode, city_name:value.CityName}).into('destinations').then(resolve())});
+                knexPromises.push(promise);
+              });
+              
+              // all db transactions completed
+              Promise.all(knexPromises).then(function(data){
+                resolve();
+              });
           }
           else {
-            reject(Error(xmlHttp.statusText));
+            reject(Error(error));
           }
-        };
-        xmlHttp.onerror = function() {
-          reject(Error("Network Error"));
-        };
-        xmlHttp.send(null);
+          });
+        })); 
+      }
+      Promise.all(tripsDataPromises).then(function(results){
+
+        knex.raw('select outbound_date, inbound_date, o.city_name as origin_city_name, o.iata_code as origin_iata_code, o.airport_name as origin_airport_name, d.city_name as dest_city_name, d.iata_code as dest_iata_code, d.airport_name as dest_airport_name, min(price) as min_price from quotes q left join destinations d on q.destination_id = d.destination_id left join destinations o on q.origin = o.destination_id where (outbound_date, inbound_date) in (select outbound_date, inbound_date from (select outbound_date, inbound_date, min(price) as min_price from quotes group by outbound_date, inbound_date, origin) group by outbound_date, inbound_date having count(*) = ? order by sum(min_price) limit 1) group by origin', [originCodes.length]).then(function(rows){resolve(rows)});
+
+      });
+
     });
-    tripsDataPromises.push(promise);
-  }
-  return tripsDataPromises;
+
+});
 }
 
 
@@ -198,9 +177,7 @@ flightsService.getTrips = function getTripsNew(originCities, scope){
               
               // all db transactions completed
               Promise.all(knexPromises).then(function(data){
-
                 resolve();
-
               });
             }
             else {
@@ -221,5 +198,9 @@ flightsService.getTrips = function getTripsNew(originCities, scope){
     });
   });
 }
+
+flightsService.getCheapestDatesNew(["LAX","JFK", "SFO"],"ORD").then(function(data){
+  console.log(JSON.stringify(data, null, 2));
+});
 
 module.exports = flightsService;
