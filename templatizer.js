@@ -9,9 +9,9 @@ templatizer.generateListTemplateMessage = function(dests, size){
         continue;
       }
       var element = {
-        title: dest.destinationName,
+        title: dest.city_name,
         image_url: "https://www.seeusoon.io/assets/images/placepictures/default/UYEjt_720px.jpg",
-        subtitle: 'group trips from $'+dest.totalCost,
+        subtitle: 'group trips from $'+dest.total_price,
         default_action: {
             type: "web_url",
             url: "https://www.skyscanner.com",

@@ -1,24 +1,18 @@
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
+var request = require('request');
+
+var knex = require('knex')({
+  dialect: 'sqlite3',
+  useNullAsDefault: true,
+  connection: {
+    filename: ':memory:'
+  }
+});
+
 var apiKey='prtl6749387986743898559646983194';
 
 var flightsService = {};
-
-/**
- * Retrieve and parse commond destination trip data.
- * @originCodes - array of airport codes
- * @scope - 'domestic' or 'international'
- * Returns promise resolving to common destination trip data
- */
-flightsService.getCheapestCommonDestinationTrips = function(originCodes, scope){
-  var promises = flightsService.getTrips(originCodes, scope);
-  return new Promise(function(resolve,reject){
-    Promise.all(promises).then(function(data){
-      var dests = flightsService.doParsing(data);
-      resolve(dests);
-    });
-  });
-}
 
 /*
 * @originCodes - array of airport codes
@@ -140,122 +134,92 @@ function callBrowseDatesAPI(originCodes, destinationCode, departureDateString, r
 /*
 * @originCities - array of airport codes
 * @scope - 'domestic' or 'international'
-* returns Promises, containing cheapest destinations
+* returns Promise, containing all destinations, sorted
 */
-flightsService.getTrips = function getTrips(originCities, scope){
-  var dest = null;
-  if(scope=='domestic'){
-    dest='US';
-  }
-  if(scope=='international'){
-    dest='anywhere';
-  }
-  var tripsDataPromises = [];
-  for(var i=0;i<originCities.length;i++){
-    originCity=originCities[i];
-    var url = 'http://partners.api.skyscanner.net/apiservices/browsequotes/v1.0/US/USD/en-US/'+originCity+'/'+dest+'/anytime/anytime?apiKey='+apiKey;
-    var promise = new Promise(function(resolve,reject){
-        var xmlHttp = new XMLHttpRequest();
-        xmlHttp.open("GET",url);
-        xmlHttp.onload = function() {
-          if (xmlHttp.status == 200) {
-            resolve(JSON.parse(xmlHttp.responseText));
-          }
-          else {
-            reject(Error(xmlHttp.statusText));
-          }
-        };
-        xmlHttp.onerror = function() {
-          reject(Error("Network Error"));
-        };
-        xmlHttp.send(null);
-    });
-    tripsDataPromises.push(promise);
-  }
-  return tripsDataPromises;
-}
+flightsService.getTrips = function getTripsNew(originCities, scope){
 
-/*
-* @travelDataArray - array of raw travel data
-*/
-flightsService.doParsing = function doParsing(travelDataArray){
-  var travelDataObject=travelDataArray[0];
-  if(!travelDataObject){
-    return [];
-  }
-  
-  var tripQuotesArray=travelDataObject.Quotes;
+  return new Promise(function(resolve,reject){
 
-  var groupTripOptionsByPrice=[];
-  for(var i=0;i<tripQuotesArray.length;i++){
-    var tripQuote=tripQuotesArray[i];
-    var result=isCommonDestination(tripQuote, travelDataArray);
-    if(result){
-      var totalCost=calculateTotalCost(result);
-      var groupTripOptionData={
-        destinationId: tripQuote.OutboundLeg.DestinationId,
-        destinationName: getDestinationNameById(tripQuote.OutboundLeg.DestinationId,travelDataObject),
-        skyscannerCode: getSkyscannerCodeById(tripQuote.OutboundLeg.DestinationId,travelDataObject),
-        totalCost: totalCost,
-        tripQuotes: result
-      };
-      groupTripOptionsByPrice.push(groupTripOptionData);
-    }
-  }
-  groupTripOptionsByPrice.sort(function(a,b){
-    return a.totalCost - b.totalCost;
-  });
-  return groupTripOptionsByPrice;
-}
-
-function isCommonDestination(keyTripQuote, travelDataArray){
-  var keyDestinationId=keyTripQuote.OutboundLeg.DestinationId;
-  var allTripsToSharedDestination=[];
-  for(var j=1;j<travelDataArray.length;j++){
-    var travelDataObject=travelDataArray[j];
-    var foundMatch=false;
-    var tripQuotesArray=travelDataObject.Quotes;
-    for(var i=0;i<tripQuotesArray.length;i++){
-      var tripQuote=tripQuotesArray[i];
-      if(keyDestinationId==tripQuote.OutboundLeg.DestinationId){
-        allTripsToSharedDestination.push(tripQuote);
-        foundMatch=true;
-        break;
+    // Create destination table
+    knex.schema.createTable('destinations', function(table) {
+      table.increments('id');
+      table.string('destination_id');
+      table.string('airport_name');
+      table.string('iata_code');
+      table.string('city_name');
+    })
+    // Create quotes table
+    .createTable('quotes',function(table){
+      table.increments('id');
+      table.string('origin');
+      table.string('destination_id').references('destinations.destination_id');
+      table.integer('price');
+    })
+    .then(function(){
+      var dest = null;
+      if(scope=='domestic'){
+        dest='US';
       }
-    }
-    if(!foundMatch){
-      return false;
-    }
-  }
-  allTripsToSharedDestination.push(keyTripQuote);
-  return allTripsToSharedDestination;
-}
+      if(scope=='international'){
+        dest='anywhere';
+      }
 
-function calculateTotalCost(allTripsToSharedDestination){
-  var totalCost=0;
-  for(var i=0;i<allTripsToSharedDestination.length;i++){
-    var trip=allTripsToSharedDestination[i];
-    totalCost+=trip.MinPrice;
-  }
-  return totalCost;
-}
+      var tripsDataPromises = [];
+      
+      for(var i=0;i<originCities.length;i++){
 
-function getDestinationNameById(destinationId, travelDataObject){
-  var places = travelDataObject.Places;
-  for(var i=0;i<places.length;i++){
-    if(places[i].PlaceId==destinationId){
-      return places[i].Name;
-    }
-  }
-}
+        var tripsPromise = new Promise(function(resolve,reject){
+          originCity=originCities[i];
+          var url = 'http://partners.api.skyscanner.net/apiservices/browsequotes/v1.0/US/USD/en-US/'+originCity+'/'+dest+'/anytime/anytime?apiKey='+apiKey;
+          request({
+            uri: url,
+            method: 'GET'
+          }, function(error, response, body){
+            if (!error && response.statusCode == 200) {
+          
+              var knexPromises = [];
 
-function getSkyscannerCodeById(destinationId,travelDataObject){
-  var places = travelDataObject.Places;
-  for(var i=0;i<places.length;i++){
-    if(places[i].PlaceId==destinationId){
-      return places[i].SkyscannerCode;
-    }
-  }
+              var data = JSON.parse(body);
+
+              // insert quotes into db
+              var quotes = data.Quotes;
+              
+              quotes.forEach(function(value){
+                var promise = new Promise(function(resolve,reject){knex.insert({origin:value.OutboundLeg.OriginId, destination_id:value.OutboundLeg.DestinationId, price:value.MinPrice}).into('quotes').then(resolve())});
+                knexPromises.push(promise);  
+              });  
+
+              // insert destinations into db
+              var destinations = data.Places;
+              destinations.forEach(function(value){
+                var promise = new Promise(function(resolve,reject){knex.insert({destination_id:value.PlaceId, airport_name:value.Name, iata_code:value.IataCode, city_name:value.CityName}).into('destinations').then(resolve())});
+                knexPromises.push(promise);
+              });
+              
+              // all db transactions completed
+              Promise.all(knexPromises).then(function(data){
+
+                resolve();
+
+              });
+            }
+            else {
+              reject(Error(error));
+            }
+          });
+        });
+
+        tripsDataPromises.push(tripsPromise);
+      }
+
+      // all requests completed, query db for cheapest quotes
+      Promise.all(tripsDataPromises).then(function(data){
+
+        knex.raw('select distinct iata_code, city_name, airport_name, q.destination_id, total_price from (select destination_id, sum(min_price) as total_price from (select destination_id, min(price) as min_price from quotes group by origin, destination_id) group by destination_id having count(*) = ?) q left join destinations d on q.destination_id = d.destination_id order by total_price',[originCities.length]).then(function(rows){resolve(rows)});
+        
+      });
+    });
+  });
 }
 
 module.exports = flightsService;

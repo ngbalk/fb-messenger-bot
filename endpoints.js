@@ -26,17 +26,20 @@ app.use(cors());
 var listSize = 4; // max value allowed in list is 4
 var PAGE_ACCESS_TOKEN = "EAAKNgXSzsvABAOrhZBc5LZBbYoJWiIPxZCSjpRmZCt0AzWgVxLdxWGXnD74wgh4MbmJOwYwQKH9l4UjHjZBFlFPTtKb91lcdh97qlpGKlCBJtU9DLBOAlb9aphaatrjAsh6odjVAZCZClbGTzLjIUXxdZCmCXjccqjm4lAK2PabO6AZDZD";
 
+// map to hold a user and their origins
+var userOriginsMap = {}
+
 // GET /webhook
 app.get('/webhook', function (req, res) {
-	console.log("subscribing via webhook");
-if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === "cooking_with_the_sauce") {
-    console.log("Validating webhook");
-    res.status(200).send(req.query['hub.challenge']);
-} 
-else {
-    console.error("Failed validation. Make sure the validation tokens match.");
-    res.sendStatus(403);          
-}  
+    console.log("subscribing via webhook");
+    if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === "cooking_with_the_sauce") {
+        console.log("Validating webhook");
+        res.status(200).send(req.query['hub.challenge']);
+    } 
+    else {
+        console.error("Failed validation. Make sure the validation tokens match.");
+        res.sendStatus(403);          
+    }
 
 });
 
@@ -72,7 +75,6 @@ function processMessage(event){
     var recipientID = event.recipient.id;
     var timeOfMessage = event.timestamp;
     var message = event.message;
-    console.log(event.recipient.id);
 
     console.log("Received message for user %d and page %d at %d with message:", senderID, recipientID, timeOfMessage);
     console.log(JSON.stringify(message));
@@ -84,23 +86,53 @@ function processMessage(event){
 
     var messageData = {};
     messageData.recipient = {id : senderID};
-    // messageData.message = {text: messageText};
 
     if (messageText) {
+        
+        // initialize this user in map
+        if(!(senderID in userOriginsMap)){
+            userOriginsMap[senderID] = [];
+        }
 
         switch (messageText) {
+
+            case 'help':
+                messageData.message = {text: "Type your nearest airport code to get started (i.e. 'JFK')\nType 'clear' to start over\nType 'flights' to start your search"};
+                callSendAPI(messageData);
+            break
+
+            case 'clear':
+                userOriginsMap[senderID] = []
+                messageData.message = {text: "Starting from scratch! Send us your nearest airport code to get started!"};
+                callSendAPI(messageData);
+            break
+            
             case 'flights':
-                var promise = flightsService.getCheapestCommonDestinationTrips(['JFK','LAX'],'domestic');
-                promise.then(function(data){
-                    var message = templatizer.generateListTemplateMessage(data, listSize);
-                    messageData.message = message;
-                    console.log(messageData);
+                if(userOriginsMap[senderID].length>0){
+                    var promise = flightsService.getTrips(userOriginsMap[senderID],'domestic');
+                    promise.then(function(data){
+                        var message = templatizer.generateListTemplateMessage(data, listSize);
+                        messageData.message = message;
+                        callSendAPI(messageData);
+                    });
+                }
+                else{
+                    messageData.message = {text: "Before we can search, let us know your nearest airport code (i.e. 'SFO')"};
                     callSendAPI(messageData);
-                });
+                }
             break;
 
+            // user is likely inputting an airport code
             default:
-                //doSomethingElse
+                if(validateAirportCode(messageText)){
+                    messageText = messageText.toUpperCase();
+                    userOriginsMap[senderID].push(messageText);
+                    messageData.message = {text: `Awesome! I see you're coming from ${JSON.stringify(userOriginsMap[senderID])}, anywhere else? When you're ready, just type 'flights'`}
+                }
+                else{
+                    messageData.message = {text: "Sorry, I didn't get that! Just type your nearest airport code! When you're ready to search, just type 'flights'"};
+                }
+                callSendAPI(messageData);
         }
     }
 }
@@ -151,7 +183,7 @@ function callSendAPI(messageData) {
       var recipientId = body.recipient_id;
       var messageId = body.message_id;
 
-      console.log("Successfully sent generic message with id %s to recipient %s", 
+      console.log("Successfully sent message with id %s to recipient %s", 
         messageId, recipientId);
     } else {
       console.error("Unable to send message.");
@@ -159,4 +191,8 @@ function callSendAPI(messageData) {
       console.error(error);
     }
   });  
+}
+
+function validateAirportCode(code){
+    return airportCodes.indexOf(code.toUpperCase()) > -1;
 }
