@@ -1,7 +1,5 @@
-var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 var request = require('request');
-
 var knex = require('knex')({
   dialect: 'sqlite3',
   useNullAsDefault: true,
@@ -11,7 +9,6 @@ var knex = require('knex')({
 });
 
 var apiKey='prtl6749387986743898559646983194';
-
 var flightsService = {};
 
 /*
@@ -22,7 +19,6 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
   
   return new Promise(function(resolve,reject){
 
-    // Create destination table
     knex.schema.createTable('destinations', function(table) {
       table.increments('id');
       table.integer('destination_id');
@@ -30,7 +26,6 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
       table.string('iata_code');
       table.string('city_name');
     })
-    // Create quotes table
     .createTable('quotes',function(table){
       table.increments('id');
       table.integer('quote_id');
@@ -86,29 +81,24 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
                 var promise = new Promise(function(resolve,reject){knex.insert({destination_id:value.PlaceId, airport_name:value.Name, iata_code:value.IataCode, city_name:value.CityName}).into('destinations').then(resolve())});
                 knexPromises.push(promise);
               });
-              
               // all db transactions completed
               Promise.all(knexPromises).then(function(data){
                 resolve();
               });
-          }
-          else {
-            reject(Error(error));
-          }
+            }
+            else {
+              reject(Error(error));
+            }
           });
         })); 
       }
+      // all requests completed, query db for cheapest quotes
       Promise.all(tripsDataPromises).then(function(results){
-
         knex.raw('select outbound_date, inbound_date, o.city_name as origin_city_name, o.iata_code as origin_iata_code, o.airport_name as origin_airport_name, d.city_name as dest_city_name, d.iata_code as dest_iata_code, d.airport_name as dest_airport_name, min(price) as min_price from quotes q left join destinations d on q.destination_id = d.destination_id left join destinations o on q.origin = o.destination_id where (outbound_date, inbound_date) in (select outbound_date, inbound_date from (select outbound_date, inbound_date, min(price) as min_price from quotes group by outbound_date, inbound_date, origin) group by outbound_date, inbound_date having count(*) = ? order by sum(min_price) limit 1) group by origin', [originCodes.length]).then(function(rows){resolve(rows)});
-
       });
-
     });
-
-});
+  });
 }
-
 
 /*
 * @originCities - array of airport codes
@@ -185,22 +175,14 @@ flightsService.getTrips = function getTripsNew(originCities, scope){
             }
           });
         });
-
         tripsDataPromises.push(tripsPromise);
       }
-
       // all requests completed, query db for cheapest quotes
       Promise.all(tripsDataPromises).then(function(data){
-
-        knex.raw('select distinct iata_code, city_name, airport_name, q.destination_id, total_price from (select destination_id, sum(min_price) as total_price from (select destination_id, min(price) as min_price from quotes group by origin, destination_id) group by destination_id having count(*) = ?) q left join destinations d on q.destination_id = d.destination_id order by total_price',[originCities.length]).then(function(rows){resolve(rows)});
-        
+        knex.raw('select distinct iata_code, city_name, airport_name, q.destination_id, total_price from (select destination_id, sum(min_price) as total_price from (select destination_id, min(price) as min_price from quotes group by origin, destination_id) group by destination_id having count(*) = ?) q left join destinations d on q.destination_id = d.destination_id order by total_price',[originCities.length]).then(function(rows){resolve(rows)}); 
       });
     });
   });
 }
-
-flightsService.getCheapestDatesNew(["LAX","JFK", "SFO"],"ORD").then(function(data){
-  console.log(JSON.stringify(data, null, 2));
-});
 
 module.exports = flightsService;
