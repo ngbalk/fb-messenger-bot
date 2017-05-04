@@ -109,7 +109,7 @@ function processMessage(event){
             
             case 'flights':
                 if(userOriginsMap[senderID].length>0){
-                    var promise = flightsService.getTrips(userOriginsMap[senderID],'domestic');
+                    var promise = flightsService.getTrips(userOriginsMap[senderID],'US');
                     promise.then(function(data){
                         var message = templatizer.generateListTemplateMessage(data, listSize);
                         messageData.message = message;
