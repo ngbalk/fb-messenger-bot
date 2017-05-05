@@ -12,7 +12,10 @@ var apiKey='prtl6749387986743898559646983194';
 var flightsService = {};
 
 function createTables(){
-  return knex.schema.createTable('destinations', function(table) {
+  
+  return knex.schema.dropTableIfExists('destinations')
+  .dropTableIfExists('quotes')
+  .createTable('destinations', function(table) {
     table.increments('id');
     table.integer('destination_id');
     table.string('airport_name');

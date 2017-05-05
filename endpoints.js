@@ -53,9 +53,19 @@ app.post('/webhook', function (req, res) {
         var pageID = entry.id;
         var timeOfEvent = entry.time;
         entry.messaging.forEach(function(event) {
+            // handle messages
             if (event.message) {
                 try{
                     processMessage(event);
+                }
+                catch(err){
+                    console.log(err);
+                }
+            }
+            // handle postbacks
+            if(event.postback){
+                try{
+                    processPostback(event);
                 }
                 catch(err){
                     console.log(err);
@@ -69,6 +79,28 @@ app.post('/webhook', function (req, res) {
     res.sendStatus(200);
   }
 });
+
+function processPostback(event){
+
+    var senderID = event.sender.id;
+    var recipientID = event.recipient.id;
+    var timeOfMessage = event.timestamp;
+    var payload = event.postback.payload;
+
+    console.log("Received postback for user %d and page %d at %d with message:", senderID, recipientID, timeOfMessage);
+    console.log(event);
+
+    var messageData = {};
+    messageData.recipient = {id : senderID};
+
+    var promise = flightsService.getCheapestDates(userOriginsMap[senderID],payload);
+    promise.then(function(flights){
+        var message = templatizer.generateFlightDatesGenericTemplateMessage(flights);
+        messageData.message = message;
+        callSendAPI(messageData);
+    });
+}
+
 
 function processMessage(event){
     var senderID = event.sender.id;
@@ -111,7 +143,8 @@ function processMessage(event){
                 if(userOriginsMap[senderID].length>0){
                     var promise = flightsService.getTrips(userOriginsMap[senderID],'US');
                     promise.then(function(data){
-                        var message = templatizer.generateListTemplateMessage(data, listSize);
+                        var message = templatizer.generateDestinationsListTemplateMessage(userOriginsMap[senderID], data, listSize);
+                        console.log(message);
                         messageData.message = message;
                         callSendAPI(messageData);
                     });
@@ -172,24 +205,25 @@ function sendFlightsMessageToGroup(groupId, destination){
 
 
 function callSendAPI(messageData) {
-  request({
-    uri: 'https://graph.facebook.com/v2.6/me/messages',
-    qs: { access_token: PAGE_ACCESS_TOKEN },
-    method: 'POST',
-    json: messageData
+    console.log(messageData);
+    request({
+        uri: 'https://graph.facebook.com/v2.6/me/messages',
+        qs: { access_token: PAGE_ACCESS_TOKEN },
+        method: 'POST',
+        json: messageData
 
-  }, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var recipientId = body.recipient_id;
-      var messageId = body.message_id;
+    }, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+        var recipientId = body.recipient_id;
+        var messageId = body.message_id;
 
-      console.log("Successfully sent message with id %s to recipient %s", 
-        messageId, recipientId);
-    } else {
-      console.error("Unable to send message.");
-      console.error(error);
-    }
-  });  
+        console.log("Successfully sent message with id %s to recipient %s", 
+            messageId, recipientId);
+        } else {
+        console.error("Unable to send message.");
+        console.error(response);
+        }
+    });  
 }
 
 function validateAirportCode(code){
