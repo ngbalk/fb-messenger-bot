@@ -48,7 +48,7 @@ templatizer.generateFlightDatesGenericTemplateMessage = function(flights){
       var element = {
         title: `${flight.origin_city_name} to ${flight.dest_city_name}`,
         image_url: "https://www.seeusoon.io/assets/images/placepictures/default/UYEjt_720px.jpg",
-        subtitle: `Flights from ${flight.min_price}`,
+        subtitle: `Flights from $${flight.min_price} departing ${normalizeUTCDate(flight.outbound_date)}, returning ${normalizeUTCDate(flight.inbound_date)}`,
         default_action: {
             type: "web_url",
             url: "https://www.skyscanner.com",
@@ -74,6 +74,12 @@ templatizer.generateFlightDatesGenericTemplateMessage = function(flights){
       }
     };
     return message;
+}
+
+function normalizeUTCDate(dateString){
+  var date = new Date(dateString);
+  date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+  return date.toDateString();
 }
 
 module.exports = templatizer;
