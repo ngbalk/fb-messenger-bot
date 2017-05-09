@@ -180,30 +180,6 @@ app.listen(8080, function () {
   console.log('FbM bot started on port 8080');
 });
 
-/*
-* Send flight messages to a single group
-* @groupId group to send flights to
-* @destination 'international' or 'domestic'
-*/
-function sendFlightsMessageToGroup(groupId, destination){
-    database.ref('/groups/'+groupId).once('value').then(function(groupSnapshot) {
-        database.ref('/airports').once('value').then(function(airportsSnapshot) {
-          var group = groupSnapshot.val();
-          var airportUserMapping = airportsSnapshot.val();
-            var origins = [];
-            for(var i=0;i<group.length;i++){
-              var member=group[i];
-              if(airportUserMapping[member]){
-                origins.push(airportUserMapping[member]);
-              }
-            }
-            var promises = flightsService.getTrips(origins,destination);
-            messagingService.sendFlightResultsToGroup(promises,groupId);
-        });
-    });
-}
-
-
 function callSendAPI(messageData) {
     console.log(messageData);
     request({
