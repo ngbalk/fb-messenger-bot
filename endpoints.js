@@ -1,7 +1,6 @@
 var airportsService = require('./airports-service');
 // var database = require('./firebase-config.js');
 var flightsService = require('./flights-data-service');
-var messagingService = require('./messaging-service');
 var templatizer = require('./templatizer');
 
 // setup express
@@ -93,11 +92,13 @@ function processPostback(event){
     var messageData = {};
     messageData.recipient = {id : senderID};
 
+    toggleTypingState(senderID, "typing_on");
     var promise = flightsService.getCheapestDates(userOriginsMap[senderID],payload);
     promise.then(function(flights){
         var message = templatizer.generateFlightDatesGenericTemplateMessage(flights);
         messageData.message = message;
         callSendAPI(messageData);
+        toggleTypingState(senderID, "typing_off");
     });
 }
 
@@ -119,6 +120,7 @@ function processMessage(event){
     var messageData = {};
     messageData.recipient = {id : senderID};
 
+    
     if (messageText) {
 
         // initialize this user in map
@@ -140,6 +142,7 @@ function processMessage(event){
             break
             
             case 'flights':
+                toggleTypingState(senderID, "typing_on");
                 if(userOriginsMap[senderID].length>0){
                     var promise = flightsService.getTrips(userOriginsMap[senderID],'US');
                     promise.then(function(data){
@@ -147,11 +150,13 @@ function processMessage(event){
                         console.log(message);
                         messageData.message = message;
                         callSendAPI(messageData);
+                        toggleTypingState(senderID, "typing_off");
                     });
                 }
                 else{
                     messageData.message = {text: "Before we can search, let us know your nearest airport code (i.e. 'SFO')"};
                     callSendAPI(messageData);
+                    toggleTypingState(senderID, "typing_off");
                 }
             break;
 
@@ -190,17 +195,23 @@ function callSendAPI(messageData) {
 
     }, function (error, response, body) {
         if (!error && response.statusCode == 200) {
-        var recipientId = body.recipient_id;
-        var messageId = body.message_id;
-
-        console.log("Successfully sent message with id %s to recipient %s", 
-            messageId, recipientId);
-        } else {
-        console.error("Unable to send message.");
-        console.error(error);
-        console.error(response);
+            var recipientId = body.recipient_id;
+            var messageId = body.message_id;
+            console.log("Successfully sent message to recipient %s", recipientId);
+        }
+        else {
+            console.error("Unable to send message.");
+            console.error(error);
+            console.error(response);
         }
     });  
+}
+
+function toggleTypingState(senderID, state){
+    var messageData = {};
+    messageData.recipient =  {id : senderID};
+    messageData.sender_action = state;
+    callSendAPI(messageData);
 }
 
 function validateAirportCode(code){

@@ -57,6 +57,7 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
 
         originCode=originCodes[i];
         var url = `http://partners.api.skyscanner.net/apiservices/browsedates/v1.0/US/USD/en-US/${originCode}/${destinationCode}/${monthString}/${monthString}?apiKey=${apiKey}`;
+        console.log(url);
         request({
           uri: url,
           method: 'GET'
@@ -66,7 +67,7 @@ flightsService.getCheapestDates = function(originCodes, destinationCode){
               var knexPromises = [];
 
               var data = JSON.parse(body);
-
+              
               // insert quotes into db
               var quotes = data.Quotes;
               
