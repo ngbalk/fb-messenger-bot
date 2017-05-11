@@ -1,5 +1,31 @@
 var templatizer = {};
 
+templatizer.generateIntermediateOriginsMessage = function(origins){
+
+  var message = {
+    attachment: {
+      type: "template",
+      payload: {
+          template_type: "button",
+          text: `Awesome! I see you're coming from ${JSON.stringify(origins)}, anywhere else?'`,
+          buttons: [
+              {
+                  "type":"postback",
+                  "title":"Start Over",
+                  "payload": "clear"
+              },
+              {
+                  "type":"postback",
+                  "title":"Search",
+                  "payload": "search"
+              }
+          ]
+      }
+    }
+  };
+  return message;
+}
+
 templatizer.generateDestinationsListTemplateMessage = function(origins, dests, size){
 
     var elements = [];
@@ -74,6 +100,27 @@ templatizer.generateFlightDatesGenericTemplateMessage = function(flights){
       }
     };
     return message;
+}
+
+templatizer.generateWebviewButtonTemplateMessage = function(){
+  var message = {
+    attachment: {
+      type: "template",
+      payload: {
+          template_type: "button",
+          text: "Enter your origin airports to get started!",
+          buttons: [
+              {
+                  "type":"web_url",
+                  "url":"https://fbmflights.localtunnel.me/webview",
+                  "title":"Enter Origin Airports",
+                  "webview_height_ratio": "compact"
+              }
+          ]
+      }
+    }
+  };
+  return message;
 }
 
 function normalizeUTCDate(dateString){

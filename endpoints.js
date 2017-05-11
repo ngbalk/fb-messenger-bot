@@ -69,7 +69,7 @@ app.post('/webhook', function (req, res) {
                 catch(err){
                     console.log(err);
                 }
-            } 
+            }
             else {
                 console.log("Webhook received unknown event: ", event);
             }
@@ -93,13 +93,43 @@ function processPostback(event){
     messageData.recipient = {id : senderID};
 
     toggleTypingState(senderID, "typing_on");
-    var promise = flightsService.getCheapestDates(userOriginsMap[senderID],payload);
-    promise.then(function(flights){
-        var message = templatizer.generateFlightDatesGenericTemplateMessage(flights);
-        messageData.message = message;
-        callSendAPI(messageData);
-        toggleTypingState(senderID, "typing_off");
-    });
+
+    switch (payload) {
+
+        case 'search':
+            if(userOriginsMap[senderID].length>0){
+                var promise = flightsService.getTrips(userOriginsMap[senderID],'US');
+                promise.then(function(data){
+                    var message = templatizer.generateDestinationsListTemplateMessage(userOriginsMap[senderID], data, listSize);
+                    console.log(message);
+                    messageData.message = message;
+                    callSendAPI(messageData);
+                    toggleTypingState(senderID, "typing_off");
+                });
+            }
+            else{
+                messageData.message = {text: "Before we can search, let us know your nearest airport code (i.e. 'SFO')"};
+                callSendAPI(messageData);
+                toggleTypingState(senderID, "typing_off");
+            }
+        break
+
+        case 'clear':
+            userOriginsMap[senderID] = []
+            messageData.message = {text: "Starting from scratch! Send us your nearest airport code to get started!"};
+            callSendAPI(messageData);
+            toggleTypingState(senderID, "typing_off");
+        break
+
+        default:
+            var promise = flightsService.getCheapestDates(userOriginsMap[senderID],payload);
+            promise.then(function(flights){
+                var message = templatizer.generateFlightDatesGenericTemplateMessage(flights);
+                messageData.message = message;
+                callSendAPI(messageData);
+                toggleTypingState(senderID, "typing_off");
+            });
+    }
 }
 
 
@@ -131,46 +161,22 @@ function processMessage(event){
         switch (messageText) {
 
             case 'help':
-                messageData.message = {text: "Type your nearest airport code to get started (i.e. 'JFK')\nType 'clear' to start over\nType 'flights' to start your search"};
+                messageData.message = {text: "Type your nearest airport code to get started (i.e. 'JFK' or 'san francisco')\nType 'clear' to start over\nType 'flights' to start your search"};
                 callSendAPI(messageData);
             break
 
-            case 'clear':
-                userOriginsMap[senderID] = []
-                messageData.message = {text: "Starting from scratch! Send us your nearest airport code to get started!"};
-                callSendAPI(messageData);
-            break
-            
-            case 'flights':
+            default:
                 toggleTypingState(senderID, "typing_on");
-                if(userOriginsMap[senderID].length>0){
-                    var promise = flightsService.getTrips(userOriginsMap[senderID],'US');
-                    promise.then(function(data){
-                        var message = templatizer.generateDestinationsListTemplateMessage(userOriginsMap[senderID], data, listSize);
-                        console.log(message);
-                        messageData.message = message;
-                        callSendAPI(messageData);
-                        toggleTypingState(senderID, "typing_off");
-                    });
-                }
-                else{
-                    messageData.message = {text: "Before we can search, let us know your nearest airport code (i.e. 'SFO')"};
+                airportsService.autocompleteAirportCode(messageText).then(function(airportGuess){
+                    userOriginsMap[senderID].push(airportGuess);
+                    messageData.message = templatizer.generateIntermediateOriginsMessage(userOriginsMap[senderID]);
                     callSendAPI(messageData);
                     toggleTypingState(senderID, "typing_off");
-                }
-            break;
-
-            // user is likely inputting an airport code
-            default:
-                if(validateAirportCode(messageText)){
-                    messageText = messageText.toUpperCase();
-                    userOriginsMap[senderID].push(messageText);
-                    messageData.message = {text: `Awesome! I see you're coming from ${JSON.stringify(userOriginsMap[senderID])}, anywhere else? When you're ready, just type 'flights'`}
-                }
-                else{
-                    messageData.message = {text: "Sorry, I didn't get that! Just type your nearest airport code! When you're ready to search, just type 'flights'"};
-                }
-                callSendAPI(messageData);
+                }).catch(function(error){
+                    messageData.message = {text: "Sorry, I didn't get that! Just tell use where you're coming from (i.e. 'JFK' or 'san francisco')! When you're ready to search, just type 'flights'"};
+                    callSendAPI(messageData);
+                    toggleTypingState(senderID, "typing_off");
+                });
         }
     }
 }
@@ -179,6 +185,10 @@ function processMessage(event){
 // GET /
 app.get('/', function(req, res){
     res.send("hello facebook bot");
+});
+
+app.get('/webview', function(req,res){
+    res.sendFile(__dirname+'/webview.html');
 });
 
 app.listen(8080, function () {
