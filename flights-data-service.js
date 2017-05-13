@@ -126,6 +126,7 @@ flightsService.getTrips = function(originCities, dest){
         var tripsPromise = new Promise(function(resolve,reject){
           originCity=originCities[i];
           var url = 'http://partners.api.skyscanner.net/apiservices/browsequotes/v1.0/US/USD/en-US/'+originCity+'/'+dest+'/anytime/anytime?apiKey='+apiKey;
+          console.log(url);
           request({
             uri: url,
             method: 'GET'
@@ -171,5 +172,9 @@ flightsService.getTrips = function(originCities, dest){
     });
   });
 }
+
+// flightsService.getTrips(["LAX","JFK","SFO"],'anywhere').then(function(data){
+//   console.log(data);
+// })
 
 module.exports = flightsService;
