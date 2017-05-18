@@ -1,4 +1,3 @@
-
 var request = require('request');
 var knex = require('knex')({
   dialect: 'sqlite3',

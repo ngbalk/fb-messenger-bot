@@ -1,5 +1,4 @@
-
-var cityImagesMap = require('./city-images.json');
+var cityImagesMap = require('../data/city-images.json');
 
 var templatizer = {};
 
@@ -39,7 +38,7 @@ templatizer.generateDestinationsListTemplateMessage = function(origins, dests, s
       }
       var element = {
         title: dest.city_name,
-        image_url: cityImagesMap[dest.iata_code] || "https://www.seeusoon.io/assets/images/placepictures/default/UYEjt_720px.jpg",
+        image_url: cityImagesMap[dest.iata_code] || cityImagesMap["default"],
         subtitle: 'group trips from $'+dest.total_price,
         default_action: {
             type: "web_url",
@@ -76,8 +75,8 @@ templatizer.generateFlightDatesGenericTemplateMessage = function(flights){
 
       var element = {
         title: `${flight.origin_city_name} to ${flight.dest_city_name}`,
-        image_url: cityImagesMap[flight.dest_iata_code] || "https://www.seeusoon.io/assets/images/placepictures/default/UYEjt_720px.jpg",
-        subtitle: `Flights from $${flight.min_price} departing ${normalizeUTCDate(flight.outbound_date)}, returning ${normalizeUTCDate(flight.inbound_date)}`,
+        image_url: cityImagesMap[flight.dest_iata_code] || cityImagesMap["default"],
+        subtitle: `Flights from $${flight.min_price} departing ${normalizeUTCDate(flight.outbound_date).toDateString()}, returning ${normalizeUTCDate(flight.inbound_date).toDateString()}`,
         default_action: {
             type: "web_url",
             url: "https://www.skyscanner.com",
@@ -85,9 +84,10 @@ templatizer.generateFlightDatesGenericTemplateMessage = function(flights){
         },
         buttons: [
           {
-            "type":"postback",
+            "type":"web_url",
             "title":"Buy",
-            "payload": "something"
+            "url": `https://www.skyscanner.com/transport/flights/${flight.origin_iata_code}/${flight.dest_iata_code}/${normalizeUTCDate(flight.outbound_date).yyyymmdd()}/${normalizeUTCDate(flight.inbound_date).yyyymmdd()}`,
+            "webview_height_ratio": "full"
           }
         ]
       };
@@ -129,7 +129,17 @@ templatizer.generateWebviewButtonTemplateMessage = function(){
 function normalizeUTCDate(dateString){
   var date = new Date(dateString);
   date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-  return date.toDateString();
+  return date;
 }
+
+Date.prototype.yyyymmdd = function() {
+  var mm = this.getMonth() + 1;
+  var dd = this.getDate();
+
+  return [this.getFullYear(),
+          (mm>9 ? '' : '0') + mm,
+          (dd>9 ? '' : '0') + dd
+         ].join('');
+};
 
 module.exports = templatizer;

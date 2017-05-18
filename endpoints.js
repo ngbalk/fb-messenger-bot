@@ -1,7 +1,6 @@
-var airportsService = require('./airports-service');
-// var database = require('./firebase-config.js');
-var flightsService = require('./flights-data-service');
-var templatizer = require('./templatizer');
+var airportsService = require('./services/airports-service');
+var flightsService = require('./services/flights-data-service');
+var templatizer = require('./services/template-service');
 
 // setup express
 var express = require('express');
@@ -13,7 +12,7 @@ var request = require('request');
 
 // load valid US airport codes for validation
 var fs = require("fs");
-var buffer = fs.readFileSync("./airport-codes.dat");
+var buffer = fs.readFileSync("./data/airport-codes.dat");
 var airportCodes = buffer.toString().split("\n");
 
 //register endpoints
@@ -100,7 +99,12 @@ function processPostback(event){
             if(userOriginsMap[senderID].length>0){
                 var promise = flightsService.getTrips(userOriginsMap[senderID],'US');
                 promise.then(function(data){
-                    var message = templatizer.generateDestinationsListTemplateMessage(userOriginsMap[senderID], data, listSize);
+                    if(data.length>=2){
+                        var message = templatizer.generateDestinationsListTemplateMessage(userOriginsMap[senderID], data, listSize);
+                    }
+                    else{
+                        var message = {text: "Sorry, no great deals jumped out at us for those origins!  But if you check back later we might have something for you!"};
+                    }
                     console.log(message);
                     messageData.message = message;
                     callSendAPI(messageData);
@@ -123,8 +127,8 @@ function processPostback(event){
 
         default:
             var promise = flightsService.getCheapestDates(userOriginsMap[senderID],payload);
-            promise.then(function(flights){
-                var message = templatizer.generateFlightDatesGenericTemplateMessage(flights);
+            promise.then(function(data){
+                var message = templatizer.generateFlightDatesGenericTemplateMessage(data);
                 messageData.message = message;
                 callSendAPI(messageData);
                 toggleTypingState(senderID, "typing_off");
@@ -168,8 +172,13 @@ function processMessage(event){
             default:
                 toggleTypingState(senderID, "typing_on");
                 airportsService.autocompleteAirportCode(messageText).then(function(airportGuess){
-                    userOriginsMap[senderID].push(airportGuess);
-                    messageData.message = templatizer.generateIntermediateOriginsMessage(userOriginsMap[senderID]);
+                    if(userOriginsMap[senderID].indexOf(airportGuess)==-1){
+                        userOriginsMap[senderID].push(airportGuess);
+                        messageData.message = templatizer.generateIntermediateOriginsMessage(userOriginsMap[senderID]);
+                    }
+                    else{
+                        messageData.message = {text: "We've already got that one! Where else are you coming from?"};
+                    }
                     callSendAPI(messageData);
                     toggleTypingState(senderID, "typing_off");
                 }).catch(function(error){

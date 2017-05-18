@@ -1,4 +1,5 @@
 {
+  "default" : "https://www.seeusoon.io/assets/images/placepictures/default/UYEjt_720px.jpg",
   "ATL" : "https://www.gwcca.org/wp-content/uploads/2016/04/Park3-1600.jpg",
   "AUA" : "http://arubaallinclusiveresort.net/wp-content/uploads/2013/07/8417319851_8bf0a9aeee.jpg",
   "BCN" : "http://cache-graphicslib.viator.com/graphicslib/thumbs360x240/2512/SITours/barcelona-modernism-and-gaudi-walking-tour-in-barcelona-168394.jpg",
@@ -46,5 +47,7 @@
   "SLC" : "https://www.atlanticaviation.com/images/default-source/imported-images/slc-skyline-edit-jpg.jpg?sfvrsn=0",
   "SYD" : "http://www.singaporeair.com/saar5/images/destination/what-to-do/syd/Sydney-skyline.jpg",
   "TPA" : "http://media.royalcaribbean.com/content/shared_assets/images/ports/hero/TPA_01.jpg",
-  "YYZ" : "https://media.timeout.com/images/102873865/630/472/image.jpg"
+  "YYZ" : "https://media.timeout.com/images/102873865/630/472/image.jpg",
+  "PDX" : "https://media-cdn.tripadvisor.com/media/photo-s/03/d4/43/79/portland.jpg",
+  "PWM" : "http://cdn-image.travelandleisure.com/sites/default/files/styles/1600x1000/public/1471298605/portland-maine-PORTLANDME0815.jpg?itok=LDYpy0UF"
 }
